@@ -124,6 +124,32 @@ def test_fit_axes_orthogonal_flags_and_keys():
     assert np.allclose(out["V"]["axis"], raw_v)
 
 
+def test_fit_axes_returns_raw_unit_axes():
+    unit, df, _ = _planted_set()
+    out = fit_axes(unit, df, exclude=set())
+    X = np.stack([unit[lab] for lab in df.label])
+    for k, col in {"V": "valence", "A": "arousal", "D": "dominance"}.items():
+        raw, _ = fit_axis(X, df[col].to_numpy())
+        assert np.allclose(out[k]["raw_axis"], raw) and np.isclose(np.linalg.norm(raw), 1.0)
+    assert not np.allclose(out["D"]["raw_axis"], out["D"]["axis"])  # D really orthogonalized
+
+
+def test_resid3_orthogonal_to_raw_d_when_a_unreliable():
+    # I3: A unreliable, D reliable -> the residual must be orthogonal to RAW D (and raw V)
+    for seed in range(5):
+        rng = np.random.default_rng(seed)
+        unit, df, _ = _planted_set(seed=seed)
+        # make A correlate with D's direction so raw D and D-orthogonalized-to-A differ
+        fit = fit_axes(unit, df, exclude=set())
+        fit["A"]["reliable"] = False
+        v = rng.normal(size=64)
+        r = residual_vectors("anger", v, fit)["anger__resid3"]
+        assert abs(r @ fit["D"]["raw_axis"]) < 1e-8
+        assert abs(r @ fit["V"]["raw_axis"]) < 1e-8
+        assert ax.removed_axes(fit, "VAD") == ["V", "D"]
+        assert ax.removed_axes(fit, "VA") == ["V"]
+
+
 def test_fit_axes_loo_is_on_raw_not_orthogonalized_axis():
     unit, df, _ = _planted_set()
     out = fit_axes(unit, df, exclude=set())
@@ -148,8 +174,8 @@ def test_residual_vectors_uses_only_reliable_axes():
     v = np.random.default_rng(3).normal(size=64)
     fit["D"]["reliable"] = False
     out = residual_vectors("pain", v, fit)
-    assert np.allclose(out["pain__resid3"], residual(v, [fit["V"]["axis"], fit["A"]["axis"]]))
-    assert abs(out["pain__resid3"] @ fit["D"]["axis"]) > 1e-3  # D really not removed
+    assert np.allclose(out["pain__resid3"], residual(v, [fit["V"]["raw_axis"], fit["A"]["raw_axis"]]))
+    assert abs(out["pain__resid3"] @ fit["D"]["raw_axis"]) > 1e-3  # D really not removed
 
 
 def test_residual_vectors_untestable_when_v_unreliable():
@@ -166,11 +192,11 @@ def test_anger_resid2_uses_only_v_and_a():
     fit = fit_axes(unit, df, exclude=set())
     v = np.random.default_rng(4).normal(size=64)
     out = residual_vectors("anger", v, fit)
-    assert np.allclose(out["anger__resid2"], residual(v, [fit["V"]["axis"], fit["A"]["axis"]]))
-    assert np.allclose(out["anger__resid3"], residual(v, [fit[k]["axis"] for k in "VAD"]))
+    assert np.allclose(out["anger__resid2"], residual(v, [fit["V"]["raw_axis"], fit["A"]["raw_axis"]]))
+    assert np.allclose(out["anger__resid3"], residual(v, [fit[k]["raw_axis"] for k in "VAD"]))
     fit["A"]["reliable"] = False
     out = residual_vectors("anger", v, fit)
-    assert np.allclose(out["anger__resid2"], residual(v, [fit["V"]["axis"]]))
+    assert np.allclose(out["anger__resid2"], residual(v, [fit["V"]["raw_axis"]]))
 
 
 def test_fit_sets_definition():
@@ -210,12 +236,15 @@ def test_scripts_end_to_end(tmp_path):
     r = rv["unit"]["pain__resid3"]
     assert r.shape == (2, 64)
     assert meta["residuals"]["pain__resid3"]["3"] == "ok"
+    assert meta["residual_axes"]["pain__resid3"]["3"] == ["V", "A", "D"]
+    assert meta["residual_axes"]["anger__resid2"]["7"] == ["V", "A"]
+    assert set(pt["raw_fits"]["all"][3]) == {"V", "A", "D"}
     assert rv["status"]["pain__resid3"] == {3: "ok", 7: "ok"}
     assert np.allclose(ax.get_residual(rv, "pain__resid3", 7), r[1].double().numpy())
     # residual is orthogonal to the for_pain axes it removed, for each layer
     for i, L in enumerate(layers):
         for k in "VAD":
-            assert abs(float(r[i] @ pt["fits"]["for_pain"][L][k])) < 1e-5
+            assert abs(float(r[i] @ pt["raw_fits"]["for_pain"][L][k])) < 1e-5
 
 
 def test_fit_axes_raises_when_excluded_label_absent():

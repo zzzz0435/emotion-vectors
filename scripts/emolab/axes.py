@@ -55,7 +55,8 @@ def loo_r(X: np.ndarray, y: np.ndarray) -> float:
 def fit_axes(unit: dict[str, np.ndarray], vad: pd.DataFrame, exclude: set[str]) -> dict:
     """Fit V, A, D axes on unit emotion vectors (labels in `exclude` or without a vector are
     skipped), then Gram-Schmidt V -> A -> D. loo_r / reliable come from each axis's own raw
-    fit, before orthogonalisation."""
+    fit, before orthogonalisation. `axis` is the orthogonalised axis (for steering);
+    `raw_axis` is the unit axis before orthogonalisation (residuals are built from it)."""
     missing = sorted(set(exclude) - (set(unit) & set(vad["label"])))
     if missing:
         raise ValueError(f"excluded labels absent from the vectors or the VAD frame (fit set "
@@ -68,12 +69,13 @@ def fit_axes(unit: dict[str, np.ndarray], vad: pd.DataFrame, exclude: set[str]) 
     for key, col in RATING_COLS.items():
         y = rows[col].to_numpy(dtype=np.float64)
         axis, alpha = fit_axis(X, y)
+        raw_axis = axis.copy()
         r = loo_r(X, y)
         for b in basis:
             axis = axis - (axis @ b) * b
         axis = axis / np.linalg.norm(axis)
         basis.append(axis)
-        out[key] = {"axis": axis, "alpha": alpha, "loo_r": r, "reliable": bool(r >= RELIABLE_R)}
+        out[key] = {"axis": axis, "raw_axis": raw_axis, "alpha": alpha, "loo_r": r, "reliable": bool(r >= RELIABLE_R)}
     return out
 
 
@@ -92,9 +94,16 @@ def residual(v: np.ndarray, axes: list[np.ndarray]) -> np.ndarray:
     return v / np.linalg.norm(v)
 
 
+def removed_axes(fit: dict, which: str) -> list[str]:
+    """Axes of `which` ("VAD", "VA") that are reliable and so get removed from a residual."""
+    return [k for k in which if fit[k]["reliable"]]
+
+
 def residual_vectors(emotion: str, v: np.ndarray, fit: dict) -> dict[str, np.ndarray | None]:
     """Residuals for one emotion from its fit set's `fit_axes` output. Only reliable axes
-    are removed; None means untestable (V unreliable)."""
+    are removed, using their RAW (pre-orthogonalisation) directions: orthogonalising against
+    an unreliable axis would otherwise leave part of a reliable one in. None means
+    untestable (V unreliable)."""
     out = {}
     for name, (emo, _, which) in RESIDUALS.items():
         if emo != emotion:
@@ -102,7 +111,7 @@ def residual_vectors(emotion: str, v: np.ndarray, fit: dict) -> dict[str, np.nda
         if not fit["V"]["reliable"]:
             out[name] = None
             continue
-        out[name] = residual(v, [fit[k]["axis"] for k in which if fit[k]["reliable"]])
+        out[name] = residual(v, [fit[k]["raw_axis"] for k in removed_axes(fit, which)])
     return out
 
 
