@@ -1,5 +1,6 @@
 """Generate the emotion / neutral / concept stories (resumable; rerun to continue)."""
 import argparse
+import csv
 import json
 import sys
 from pathlib import Path
@@ -30,12 +31,20 @@ def main() -> None:
     emotions, topics, concepts = (_load("6.2_emotions.json"), _load("6.2_story_topics.json"),
                                   _load("6.2_concepts.json"))
 
+    seed_base = stories.BASE_SEED
     if args.top_up:
         raw = json.loads((rdir / "shortfall.json").read_text(encoding="utf-8"))
         shortfall = {(r["label"], r["topic_idx"], r["subtype_idx"]): r["missing"] for r in raw}
-        existing = stories.read_existing(out)
+        existing = stories.read_rows(out)
         offset = max((r["replicate"] for r in existing), default=-1) + 1
-        jobs = stories.build_topup_jobs(shortfall, emotions, topics, concepts, offset)
+        report = rdir / "filter_report.csv"
+        acceptance = {}
+        if report.exists():
+            with report.open(encoding="utf-8", newline="") as f:
+                acceptance = stories.acceptance_rates(list(csv.DictReader(f)))
+        seed_base = stories.topup_seed_base(offset)
+        jobs = stories.build_topup_jobs(shortfall, emotions, topics, concepts, offset,
+                                        acceptance)
     else:
         jobs = stories.build_jobs(emotions, topics, concepts)
     if args.limit is not None:
@@ -43,7 +52,7 @@ def main() -> None:
     print(f"{len(jobs)} jobs -> {out}", flush=True)
 
     model, tok = models.load(args.model)
-    n = stories.run_generation(jobs, out, stories.make_generate_fn(model, tok),
+    n = stories.run_generation(jobs, out, stories.make_generate_fn(model, tok, seed_base),
                                args.batch_size, spec.name)
     print(f"done: {n} new stories written", flush=True)
 

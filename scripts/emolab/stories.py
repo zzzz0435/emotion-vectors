@@ -1,6 +1,8 @@
 """Story jobs, prompts, resumable generation, and quality filtering."""
 import json
+import math
 import re
+import warnings
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Callable, Literal
@@ -94,13 +96,40 @@ def build_jobs(emotions: list[dict], topics: list[dict], concepts: list[dict]) -
     return jobs
 
 
+BASE_SEED = 42
+MIN_ACCEPTANCE = 0.1
+MAX_OVERSAMPLE = 5
+
+
+def topup_seed_base(replicate_offset: int) -> int:
+    """Seed base for a top-up round: every round (its offset grows) draws fresh samples."""
+    return BASE_SEED + 1000 * replicate_offset
+
+
+def topup_job_count(missing: int, acceptance: float) -> int:
+    """Jobs to generate for a cell short by `missing`: ceil(missing / acceptance), with
+    acceptance floored at 0.1 and the count capped at 5x missing."""
+    acc = max(acceptance, MIN_ACCEPTANCE)
+    return min(math.ceil(missing / acc), MAX_OVERSAMPLE * missing)
+
+
+def acceptance_rates(report_rows: list[dict]) -> dict[str, float]:
+    """label -> n_kept / n_raw from filter_report.csv rows (labels with no raw rows omitted)."""
+    return {r["label"]: int(r["n_kept"]) / int(r["n_raw"])
+            for r in report_rows if int(r["n_raw"]) > 0}
+
+
 def build_topup_jobs(shortfall: dict[tuple[str, int, int], int], emotions: list[dict],
                      topics: list[dict], concepts: list[dict],
-                     replicate_offset: int) -> list[StoryJob]:
+                     replicate_offset: int,
+                     acceptance: dict[str, float] | None = None) -> list[StoryJob]:
+    """Oversampled jobs per short cell (select_balanced keeps only the first N passing
+    stories, so extras are harmless). Replicate numbers continue from the offset."""
     emo, con, top = _index(emotions, topics, concepts)
+    acceptance = acceptance or {}
     jobs: list[StoryJob] = []
     for (label, topic_idx, subtype_idx), missing in shortfall.items():
-        for k in range(missing):
+        for k in range(topup_job_count(missing, acceptance.get(label, 1.0))):
             jobs.append(_make_job(label, topic_idx, subtype_idx, replicate_offset + k,
                                   emo, con, top))
     return jobs
@@ -119,20 +148,40 @@ def round_robin_limit(jobs: list[StoryJob], n: int) -> list[StoryJob]:
     return out[:n]
 
 
-def read_existing(out_path: Path) -> list[dict]:
-    """Rows already in the JSONL; a torn trailing line (hard kill) is cut off."""
-    if not out_path.exists():
-        return []
-    raw = out_path.read_bytes()
+def _scan(raw: bytes, path) -> tuple[list[dict], int]:
+    """Parse JSONL bytes -> (rows, byte length of the good prefix). A bad line that is not the
+    last raises ValueError; a bad last line is skipped with a warning."""
+    lines = raw.splitlines(keepends=True)
     rows, good_len = [], 0
-    for line in raw.splitlines(keepends=True):
+    for i, line in enumerate(lines):
         try:
             rows.append(json.loads(line))
         except ValueError:  # JSONDecodeError and UnicodeDecodeError (torn multibyte char)
+            if i < len(lines) - 1:
+                raise ValueError(f"{path}: line {i + 1} is not valid JSON and is not the last "
+                                 f"line; refusing to guess (fix or remove it by hand)") from None
+            warnings.warn(f"{path}: skipping torn last line {i + 1}")
             break
         good_len += len(line)
+    return rows, good_len
+
+
+def read_rows(path: Path) -> list[dict]:
+    """Pure reader: rows of a JSONL file, never writes. See _scan for bad-line handling."""
+    if not path.exists():
+        return []
+    return _scan(path.read_bytes(), path)[0]
+
+
+def repair_torn_tail(path: Path) -> list[dict]:
+    """Rows of the JSONL; a torn final line (hard kill) is cut off on disk. Mid-file bad
+    lines raise instead (via _scan)."""
+    if not path.exists():
+        return []
+    raw = path.read_bytes()
+    rows, good_len = _scan(raw, path)
     if good_len < len(raw):
-        with out_path.open("r+b") as f:
+        with path.open("r+b") as f:
             f.truncate(good_len)
     return rows
 
@@ -141,7 +190,7 @@ def run_generation(jobs: list[StoryJob], out_path: Path,
                    generate_fn: Callable[[list[str]], list[str]],
                    batch_size: int, model_name: str) -> int:
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    done = {r["id"] for r in read_existing(out_path)}
+    done = {r["id"] for r in repair_torn_tail(out_path)}
     todo = [j for j in jobs if j.id not in done]
     written = 0
     print(f"{len(done)} already done, {len(todo)} to generate", flush=True)
@@ -158,14 +207,14 @@ def run_generation(jobs: list[StoryJob], out_path: Path,
     return written
 
 
-def make_generate_fn(model, tokenizer) -> Callable[[list[str]], list[str]]:
+def make_generate_fn(model, tokenizer, seed_base: int = BASE_SEED) -> Callable[[list[str]], list[str]]:
     import torch
 
     from emolab.models import format_chat
     counter = {"batch": 0}
 
     def generate(prompts: list[str]) -> list[str]:
-        torch.manual_seed(42 + counter["batch"])
+        torch.manual_seed(seed_base + counter["batch"])
         counter["batch"] += 1
         texts = [format_chat(tokenizer, p) for p in prompts]
         enc = tokenizer(texts, return_tensors="pt", padding=True,

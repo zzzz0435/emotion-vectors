@@ -36,7 +36,7 @@ def main() -> None:
     emotions, topics, concepts = (_load("6.2_emotions.json"), _load("6.2_story_topics.json"),
                                   _load("6.2_concepts.json"))
     banned = {e["label"]: e["banned"] for e in emotions}
-    raw = stories.read_existing(raw_path)
+    raw = stories.read_rows(raw_path)
     targets = stories.targets_from_jobs(stories.build_jobs(emotions, topics, concepts))
     kept, shortfall = stories.select_balanced(raw, targets, banned)
 
