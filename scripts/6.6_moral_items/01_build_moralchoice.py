@@ -30,7 +30,8 @@ def main() -> None:
     assert len(harm) == 347, f"expected 347 harm rows, got {len(harm)}"
     sample = sample_items(harm, n=150, seed=42)
     items = [{"id": r.scenario_id, "context": r.context, "action1": r.action1,
-              "action2": r.action2, "harmful": int(r.harmful)} for r in sample.itertuples()]
+              "action2": r.action2, "harmful": int(r.harmful),
+              "harm_types": list(r.harm_types)} for r in sample.itertuples()]
     OUT.write_text(json.dumps(items, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
     print(f"rows={len(df)} harm_rows={len(harm)} sampled={len(items)} -> {OUT}")
 

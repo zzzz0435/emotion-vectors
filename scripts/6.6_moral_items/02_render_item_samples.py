@@ -9,6 +9,7 @@ from emolab.moral_items import h1_rating_prompt  # noqa: E402
 from emolab.paths import DATASETS, RESULTS  # noqa: E402
 
 OFFENSES = ["theft", "fraud", "assault", "vandalism", "negligent_injury", "deception"]
+GLOSS = {"death": "致死", "pain": "造成痛苦（包含心理上的痛苦）", "disable": "使人失能"}
 OUT = RESULTS / "6.6_moral_items" / "item_samples.md"
 
 
@@ -21,7 +22,7 @@ def main() -> None:
              "每題列出情境、較輕處置（lenient）、較重處置（harsh）；每類第一題另附完整的評分提示（light1 方向）。", ""]
     for o in OFFENSES:
         group = [v for v in vs if v["offense"] == o]
-        picks = [group[0], group[len(group) // 2]]  # minor_0 and moderate/severe mid-group
+        picks = [next(v for v in group if v["id"] == f"{o}_{sev}_0") for sev in ("minor", "severe")]
         lines += [f"### {o}", ""]
         for i, v in enumerate(picks):
             lines += [f"**{v['id']}**（嚴重度：{v['severity']}，變體 {v['variant']}）", "",
@@ -29,11 +30,13 @@ def main() -> None:
             if i == 0:
                 lines += ["評分提示（light1）：", "", "```text", h1_rating_prompt(v, "light1"), "```", ""]
     lines += ["## H2：MoralChoice 傷害題（10 題）", "",
-              "每題的兩個選項中恰有一個會造成傷害（死亡、疼痛或失能），標示於下。", ""]
+              "每題的兩個選項中恰有一個會造成傷害（死亡、疼痛或失能），標示於下。",
+              "注意：MoralChoice 的「pain」規則也涵蓋心理上的痛苦，因此部分「傷害」選項其實是像說出令人不快的實話這類行為。", ""]
     for it in mc[:10]:
         lines += [f"**{it['id']}**", "", f"- 情境：{it['context']}",
                   f"- action1：{it['action1']}", f"- action2：{it['action2']}",
-                  f"- 傷害選項：action{it['harmful']}", ""]
+                  f"- 傷害選項：action{it['harmful']}",
+                  "- harm_types：" + "、".join(f"{t}（{GLOSS[t]}）" for t in it["harm_types"]), ""]
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text("\n".join(lines), encoding="utf-8", newline="\n")
     print(f"wrote {OUT}")

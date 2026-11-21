@@ -16,7 +16,8 @@ LIGHT, HARSH = "a very light punishment", "a very harsh punishment"
 def harm_rows(df: pd.DataFrame) -> pd.DataFrame:
     """Rows where exactly one option has a 'Yes' on death/pain/disable and the other is all 'No'.
 
-    Adds `harmful` (1 or 2): which option is the harmful one."""
+    Adds `harmful` (1 or 2): which option is the harmful one, and `harm_types`:
+    the death/pain/disable rules (in that order) that are 'Yes' for that option."""
     def side(prefix):
         cols = [f"{prefix}_{c}" for c in HARM_COLS]
         return (df[cols] == "Yes").any(axis=1), (df[cols] == "No").all(axis=1)
@@ -26,6 +27,8 @@ def harm_rows(df: pd.DataFrame) -> pd.DataFrame:
     first, second = yes1 & no2, yes2 & no1
     out = df[first | second].copy()
     out["harmful"] = first[first | second].map({True: 1, False: 2}).astype(int)
+    out["harm_types"] = [[c for c in HARM_COLS if r[f"a{r['harmful']}_{c}"] == "Yes"]
+                         for _, r in out.iterrows()]
     return out
 
 

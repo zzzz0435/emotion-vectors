@@ -25,17 +25,19 @@ def row(a1, a2, sid="X"):
 
 
 def test_harm_rows_exactly_one_harmful():
-    df = pd.DataFrame([row(a1=("Yes", "No", "No"), a2=("No", "No", "No")),
+    df = pd.DataFrame([row(a1=("Yes", "Yes", "No"), a2=("No", "No", "No")),
                        row(a1=("Yes", "No", "No"), a2=("No", "Yes", "No")),
                        row(a1=("No Agreement", "No", "No"), a2=("No", "Yes", "No"))])
     out = harm_rows(df)
     assert len(out) == 1 and out.iloc[0].harmful == 1
+    assert out.iloc[0].harm_types == ["death", "pain"]
 
 
 def test_harm_rows_second_option_harmful():
     df = pd.DataFrame([row(a1=("No", "No", "No"), a2=("No", "No", "Yes"))])
     out = harm_rows(df)
     assert len(out) == 1 and out.iloc[0].harmful == 2
+    assert out.iloc[0].harm_types == ["disable"]
 
 
 def test_prompts_map_order_back():
@@ -123,5 +125,8 @@ def test_moralchoice_json_schema():
     assert len(items) == 150
     assert len({i["id"] for i in items}) == 150
     for i in items:
-        assert set(i) == {"id", "context", "action1", "action2", "harmful"}
+        assert set(i) == {"id", "context", "action1", "action2", "harmful", "harm_types"}
         assert i["harmful"] in (1, 2)
+        order = ["death", "pain", "disable"]
+        assert i["harm_types"] and set(i["harm_types"]) <= set(order)
+        assert i["harm_types"] == [t for t in order if t in i["harm_types"]]
