@@ -15,14 +15,19 @@ def valid_df(low=()):
     return pd.DataFrame(rows)
 
 
-def axes(v_ok=True):
+def axes(v_ok=True, fits=None, resid=None):
     def lay(r):
         return {k: {"alpha": 1.0, "loo_r": r if k == "V" else 0.8,
                     "reliable": (r >= .5) if k == "V" else True} for k in "VAD"}
     r = 0.7 if v_ok else 0.1
     st = "ok" if v_ok else "untestable"
-    return {"fits": {"all": {"9": lay(r), "18": lay(r)}},
-            "residuals": {"anger__resid3": {"9": st, "18": st}}}
+    out = {"fits": {"all": {"9": lay(r), "18": lay(r)}, "for_anger": {"9": lay(r), "18": lay(r)}},
+           "residuals": {"anger__resid3": {"9": st, "18": st}}}
+    if fits is not None:
+        out["fits"] = fits
+    if resid is not None:
+        out["residuals"] = resid
+    return out
 
 
 CONTAM = {"18": {"punishment": {"anger": {"cos": .4, "ref_cos": .1, "p95_concepts": .2, "flagged": True},
@@ -113,3 +118,47 @@ def test_examples_72_passages_baseline_shared():
 def test_parse_sae_tops():
     md = "## anger\n\n### 1. 特征 12（余弦 0.310）\n\n- x\n### 2. 特征 5（余弦 0.200）\n## fear\n\n### 1. 特征 7（余弦 -0.100）\n## joy\n### 1. 特征 9（余弦 0.5）\n"
     assert _load_08().parse_sae_tops(md) == {"anger": [(12, 0.31), (5, 0.2)], "fear": [(7, -0.1)]}
+
+
+def test_h4_uses_for_anger_not_all():
+    # all-fit V reliable, but for_anger V unreliable and residual untestable everywhere
+    a = axes(v_ok=True)
+    a["fits"]["for_anger"] = axes(v_ok=False)["fits"]["for_anger"]
+    a["residuals"] = {"anger__resid3": {"9": "untestable", "18": "untestable"}}
+    assert "H4 无法检验" in render(OK_SEP, ax=a)
+
+
+def test_h4_names_usable_layers_even_if_all_unreliable():
+    a = axes(v_ok=False)
+    a["residuals"] = {"anger__resid3": {"9": "untestable", "18": "ok"}}
+    s = render(OK_SEP, ax=a)
+    assert "H4 可以在第 18 层检验" in s and "H4 无法检验" not in s
+
+
+def test_h4_falls_back_to_for_anger_fit_without_residuals():
+    a = axes(v_ok=True)
+    del a["residuals"]
+    assert "H4 可以在第 9、18 层检验" in render(OK_SEP, ax=a)
+
+
+def test_missing_all_fit_set_no_crash():
+    s = render(OK_SEP, ax={"fits": {}, "residuals": {}})
+    assert "没有通用轴的拟合结果" in s and "H4 无法检验" in s
+
+
+def test_pain_judged_by_story_vector_only():
+    pc = {**PAIN, "vectors": {"s2": {**PAIN["vectors"]["s2"], "cos_pain": 0.1, "cos_pain_painaxis": 0.9}}}
+    s = render_checkpoint1(valid_df(), OK_SEP, CONTAM, axes(), SAE, "x.md", pain_compare=pc)
+    assert "没有特别突出" in s and "pain_painaxis 的余弦是 0.90" in s
+
+
+def test_optional_inputs_absent_says_not_provided():
+    s = render_checkpoint1(valid_df(), OK_SEP, CONTAM, axes(), {}, "x.md", pain_compare=None)
+    assert s.count("未提供") == 3  # anger, fear, pain section
+
+
+def test_08_required_inputs_error_names_file_and_script(tmp_path):
+    import pytest
+    m = _load_08()
+    with pytest.raises(FileNotFoundError, match="axes.json.*01_fit_axes.py"):
+        m.require_inputs({"axes": tmp_path / "axes.json"})

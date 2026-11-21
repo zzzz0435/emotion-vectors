@@ -54,6 +54,33 @@ def parse_sae_tops(md: str, labels=("anger", "fear")) -> dict:
     return out
 
 
+def load_json(p: Path):
+    return json.loads(p.read_text(encoding="utf-8"))
+
+
+def input_paths(name: str) -> tuple[dict, dict]:
+    """(required, optional) input files. Missing optional ones become "未提供" sections."""
+    rdir, adir, cdir = (results_dir("6.2_emotion_vectors", name), results_dir("6.3_axes", name),
+                        results_dir("6.9_crosscheck", name))
+    required = {"vectors": rdir / "vectors.pt", "validation": rdir / "validation.csv",
+                "separability": rdir / "separability.json",
+                "contamination": rdir / "contamination.json", "axes": adir / "axes.json"}
+    optional = {"sae": cdir / f"sae_L{LAYER}.md", "pain": cdir / "pain_axis_compare.json"}
+    return required, optional
+
+
+PRODUCERS = {"vectors.pt": "04_build_vectors.py", "validation.csv": "06_validate_vectors.py",
+             "separability.json": "06_validate_vectors.py",
+             "contamination.json": "07_contamination.py", "axes.json": "6.3_axes/01_fit_axes.py"}
+
+
+def require_inputs(required: dict) -> None:
+    for path in required.values():
+        if not Path(path).exists():
+            raise FileNotFoundError(f"missing required input {path} "
+                                    f"(produced by {PRODUCERS.get(Path(path).name, '?')}); run it first")
+
+
 def generate(model, tok, prompt: str, direction, alpha: float, resid_norm: float) -> str:
     dev = next(model.parameters()).device
     enc = tok(models.format_chat(tok, prompt), return_tensors="pt", add_special_tokens=False).to(dev)
@@ -70,7 +97,9 @@ def main() -> None:
     name = models.MODELS[args.model].name
     rdir = results_dir("6.2_emotion_vectors", name)
 
-    payload = torch.load(rdir / "vectors.pt")
+    required, optional = input_paths(name)
+    require_inputs(required)  # fail before loading the model
+    payload = torch.load(required["vectors"])
     li = payload["layers"].index(LAYER)
     resid_norm = float(payload["resid_norm"][LAYER])
     emotions = json.loads((DATASETS / "6.2_emotions.json").read_text(encoding="utf-8"))
@@ -87,14 +116,12 @@ def main() -> None:
     ex_path = rdir / "checkpoint1_examples.md"
     ex_path.write_text(render_examples(core, gens), encoding="utf-8", newline="\n")
 
-    def load_json(p: Path):
-        return json.loads(p.read_text(encoding="utf-8"))
-    sae_md = results_dir("6.9_crosscheck", name) / f"sae_L{LAYER}.md"
+    sae_md, pain_json = optional["sae"], optional["pain"]
     summary = render_checkpoint1(
-        pd.read_csv(rdir / "validation.csv"), load_json(rdir / "separability.json"),
-        load_json(rdir / "contamination.json"), load_json(results_dir("6.3_axes", name) / "axes.json"),
+        pd.read_csv(required["validation"]), load_json(required["separability"]),
+        load_json(required["contamination"]), load_json(required["axes"]),
         parse_sae_tops(sae_md.read_text(encoding="utf-8")) if sae_md.exists() else {},
-        str(ex_path), pain_compare=load_json(results_dir("6.9_crosscheck", name) / "pain_axis_compare.json"),
+        str(ex_path), pain_compare=load_json(pain_json) if pain_json.exists() else None,
         core=core)
     (rdir / "checkpoint1_summary.md").write_text(summary, encoding="utf-8", newline="\n")
     print("wrote", ex_path, "and checkpoint1_summary.md")

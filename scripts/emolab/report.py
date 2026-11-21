@@ -104,22 +104,47 @@ def _axes_section(axes_info: dict) -> list[str]:
         cells = [f"{_f(fit[L][k]['loo_r'])}（{'可靠' if fit[L][k]['reliable'] else '不可靠'}）" for L in layers]
         lines.append(f"| {name} | " + " | ".join(cells) + " |")
     lines.append("")
+    fa = axes_info.get("fits", {}).get("for_anger", {})
+    fa_layers = sorted(fa, key=int)
+    if fa_layers:
+        lines += ["检验 H4 用的是「不含愤怒和恐惧」拟合的轴（避免循环论证），它的效价轴 V 可靠性：", "",
+                  "| 轴 | " + " | ".join(f"第 {L} 层" for L in fa_layers) + " |",
+                  "|---|" + "---|" * len(fa_layers),
+                  "| V（不含愤怒、恐惧） | " + " | ".join(
+                      f"{_f(fa[L]['V']['loo_r'])}（{'可靠' if fa[L]['V']['reliable'] else '不可靠'}）"
+                      for L in fa_layers) + " |", ""]
     if not layers:
-        lines.append("（没有轴的拟合结果。）")
+        lines.append("（没有通用轴的拟合结果。）")
     elif any(fit[L]["V"]["reliable"] for L in layers):
-        lines.append("白话：效价轴至少在部分层可靠，涉及它的检验（H4）可以在这些层进行。")
+        lines.append("白话：用全部情绪拟合时，效价轴至少在部分层可靠。")
         for k in "AD":
             if not any(fit[L][k]["reliable"] for L in layers):
                 lines.append(f"但{AXIS_NAMES[k]}在所有层都不可靠，后续分析不使用它。")
     else:
-        lines.append("白话：**效价轴在每一层都不可靠**，拟合出来的方向没法预测情绪的好坏评分。"
-                     "依赖它的假设无法检验，研究报告里会写成「H4 无法检验」。")
+        lines.append("白话：用全部情绪拟合时，**效价轴在每一层都不可靠**，"
+                     "拟合出来的方向没法预测情绪的好坏评分。")
     res = axes_info.get("residuals", {})
     if res:
         lines += ["", "去掉轴之后的「残差向量」是否可用（untestable 表示当层效价轴不可靠，无法产生）：", ""]
         for name, st in sorted(res.items()):
             lines.append(f"- {name}：" + "，".join(
                 f"第 {L} 层 {s}" for L, s in sorted(st.items(), key=lambda x: int(x[0]))))
+    lines.append("")
+    # H4 verdict: anger__resid3 per layer, else V reliability of the for_anger fit
+    st = res.get("anger__resid3")
+    if st:
+        usable = sorted((L for L, s in st.items() if s == "ok"), key=int)
+    elif fa_layers:
+        usable = [L for L in fa_layers if fa[L]["V"]["reliable"]]
+    else:
+        usable = None
+    if usable is None:
+        lines.append("H4 判定：没有不含愤怒、恐惧的轴拟合结果，**H4 无法检验**。")
+    elif usable:
+        lines.append(f"H4 判定：H4 可以在第 {'、'.join(usable)} 层检验（这些层能得到去掉轴后的愤怒残差向量）。")
+    else:
+        lines.append("H4 判定：不含愤怒、恐惧的效价轴在每一层都不可靠，去掉轴后的愤怒向量做不出来，"
+                     "研究报告里会写成「H4 无法检验」。")
     lines.append("")
     return lines
 
@@ -133,7 +158,7 @@ def _sae_section(sae_tops: dict) -> list[str]:
     for lab in ("anger", "fear"):
         feats = sae_tops.get(lab)
         lines.append(f"- {lab}：" + ("；".join(f"特征 {i}（{_f(c)}）" for i, c in feats)
-                                    if feats else "没有结果。"))
+                                    if feats else "未提供（没有 sae_L18.md）。"))
     lines.append("")
     return lines
 
@@ -141,7 +166,7 @@ def _sae_section(sae_tops: dict) -> list[str]:
 def _pain_section(pc: dict | None) -> list[str]:
     lines = ["## 六、与 Pain-axis 疼痛向量的相似度", ""]
     if not pc:
-        return lines + ["（没有比较结果。）", ""]
+        return lines + ["未提供（没有 pain_axis_compare.json，该部分略过）。", ""]
     v = pc["vectors"][pc.get("primary", "s2")]
     lines += [f"把我们的疼痛向量，和 Pain-axis 论文公开的疼痛向量（第 {pc['their_layer']} 层）算余弦相似度，"
               f"并和其他情绪向量对比，看疼痛是否特别突出。", "",
@@ -151,13 +176,15 @@ def _pain_section(pc: dict | None) -> list[str]:
     lines += [f"| {k}（对照） | {_f(c)} |" for k, c in v["cos_baselines"].items()]
     lines.append("")
     base_max = max(v["cos_baselines"].values()) if v["cos_baselines"] else float("-inf")
-    best_pain = max(v["cos_pain"], v["cos_pain_painaxis"])
-    if best_pain > base_max:
-        lines.append(f"白话：疼痛向量与对方的相似度（{_f(best_pain)}）高于所有对照情绪（最高 {_f(base_max)}），"
-                     f"疼痛比较突出。")
+    pain = v["cos_pain"]
+    if pain > base_max:
+        lines.append(f"白话：我们用故事提取的疼痛向量与对方的相似度（{_f(pain)}）高于所有对照情绪"
+                     f"（最高 {_f(base_max)}），疼痛比较突出。")
     else:
-        lines.append(f"白话：疼痛向量与对方的相似度（{_f(best_pain)}）并不比对照情绪（最高 {_f(base_max)}）高，"
-                     f"疼痛没有特别突出，不能说两者抓到了同一个东西。")
+        lines.append(f"白话：我们用故事提取的疼痛向量与对方的相似度（{_f(pain)}）并不比对照情绪"
+                     f"（最高 {_f(base_max)}）高，疼痛没有特别突出，不能说两者抓到了同一个东西。")
+    lines.append(f"另外，pain_painaxis 的余弦是 {_f(v['cos_pain_painaxis'])}。它是用 Pain-axis 自己的句子"
+                 f"构建的，和对方相似本来就是预期的，所以只是较弱的证据，不用它来判断疼痛是否突出。")
     cav = []
     if not pc.get("layer_match", True):
         cav.append(f"层不一致（对方 {pc['their_layer']}，我们 {pc['our_layer']}）")
