@@ -105,6 +105,19 @@ def build_topup_jobs(shortfall: dict[tuple[str, int, int], int], emotions: list[
     return jobs
 
 
+def round_robin_limit(jobs: list[StoryJob], n: int) -> list[StoryJob]:
+    """First n jobs taking one per label in turn (first of each label, then second...)."""
+    by_label: dict[str, list[StoryJob]] = {}
+    for j in jobs:
+        by_label.setdefault(j.label, []).append(j)
+    out: list[StoryJob] = []
+    depth = 0
+    while len(out) < n and any(len(v) > depth for v in by_label.values()):
+        out.extend(v[depth] for v in by_label.values() if len(v) > depth)
+        depth += 1
+    return out[:n]
+
+
 def read_existing(out_path: Path) -> list[dict]:
     """Rows already in the JSONL; a torn trailing line (hard kill) is cut off."""
     if not out_path.exists():
@@ -114,7 +127,7 @@ def read_existing(out_path: Path) -> list[dict]:
     for line in raw.splitlines(keepends=True):
         try:
             rows.append(json.loads(line))
-        except json.JSONDecodeError:
+        except ValueError:  # JSONDecodeError and UnicodeDecodeError (torn multibyte char)
             break
         good_len += len(line)
     if good_len < len(raw):

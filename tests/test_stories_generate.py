@@ -7,7 +7,7 @@ import torch
 from emolab.batching import run_with_oom_backoff
 from emolab.paths import DATASETS
 from emolab.stories import (GENERAL_RESTRICTION, build_jobs, build_topup_jobs,
-                            run_generation)
+                            round_robin_limit, run_generation)
 
 
 def _load(name):
@@ -115,3 +115,25 @@ def test_oom_at_batch_one_propagates():
 
     with pytest.raises(torch.cuda.OutOfMemoryError):
         list(run_with_oom_backoff(always, [1, 2, 3], 4))
+
+
+def test_resume_repairs_line_torn_inside_multibyte_char(tmp_path):
+    jobs = build_jobs(EMOTIONS, TOPICS, CONCEPTS)[:6]
+    out = tmp_path / "s.jsonl"
+    run_generation(jobs[:3], out, lambda ps: ["it’s fine"] * len(ps), batch_size=3,
+                   model_name="m")
+    with out.open("ab") as f:  # first byte of a 3-byte char, cut mid-character
+        f.write('{"id": "x", "text": "’'.encode("utf-8")[:-2])
+    run_generation(jobs, out, _fake, batch_size=3, model_name="m")
+    assert _ids(out) == [j.id for j in jobs]
+
+
+def test_round_robin_limit_covers_labels_deterministically():
+    jobs = build_jobs(EMOTIONS, TOPICS, CONCEPTS)
+    labels = list(dict.fromkeys(j.label for j in jobs))
+    sel = round_robin_limit(jobs, len(labels) + 3)
+    assert [j.label for j in sel[:len(labels)]] == labels
+    assert [j.label for j in sel[len(labels):]] == labels[:3]
+    assert sel[0].replicate == 0 and sel[len(labels)].id != sel[0].id
+    assert sel == round_robin_limit(jobs, len(labels) + 3)
+    assert len(round_robin_limit(jobs, 10**6)) == len(jobs)

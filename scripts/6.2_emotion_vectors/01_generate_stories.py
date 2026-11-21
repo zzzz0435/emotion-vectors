@@ -39,7 +39,7 @@ def main() -> None:
     else:
         jobs = stories.build_jobs(emotions, topics, concepts)
     if args.limit is not None:
-        jobs = jobs[:args.limit]
+        jobs = stories.round_robin_limit(jobs, args.limit)
     print(f"{len(jobs)} jobs -> {out}", flush=True)
 
     model, tok = models.load(args.model)

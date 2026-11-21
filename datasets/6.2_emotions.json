@@ -2,7 +2,7 @@
   {
     "label": "anger",
     "group": "core",
-    "description": "intense anger at a malfunctioning machine, a traffic jam or some other frustrating situation",
+    "description": "intense anger at the things and circumstances that keep obstructing what they want to do, never directed at any person",
     "banned": [
       "\\bangr\\w*",
       "\\banger\\w*",
@@ -25,7 +25,7 @@
   {
     "label": "fear",
     "group": "core",
-    "description": "intense fear of a dangerous situation, such as a violent storm or a crumbling ledge",
+    "description": "intense fear of a dangerous situation that threatens them, never fear of any person's malice",
     "banned": [
       "\\bfear\\w*",
       "\\bafraid\\b",
@@ -46,7 +46,7 @@
   {
     "label": "sadness",
     "group": "core",
-    "description": "deep sadness over a quiet, unavoidable loss, such as a favorite place changing or a season ending",
+    "description": "deep sadness over a quiet, unavoidable loss that nobody caused",
     "banned": [
       "\\bsad(?:ly|ness|den\\w*)?\\b",
       "\\bsorrow\\w*",
@@ -66,7 +66,7 @@
   {
     "label": "joy",
     "group": "core",
-    "description": "bright, overflowing joy at how the day is going",
+    "description": "bright, overflowing joy",
     "banned": [
       "\\bjoy(?:s|ful\\w*|ous\\w*|fully|ed)?\\b",
       "\\bhapp(?:y|ily|iness|ier|iest)\\b",
@@ -144,7 +144,7 @@
   {
     "label": "pride",
     "group": "map",
-    "description": "quiet pride in something they worked hard to finish",
+    "description": "quiet pride in something they worked hard to achieve",
     "banned": [
       "\\bpride\\b",
       "\\bproud\\w*",
@@ -159,7 +159,7 @@
   {
     "label": "gratitude",
     "group": "map",
-    "description": "warm gratitude for a stroke of good luck or a small favor freely given",
+    "description": "warm gratitude for a stroke of good luck or a favor freely given",
     "banned": [
       "\\bgrateful\\w*",
       "\\bgratitude\\b",
@@ -175,7 +175,7 @@
   {
     "label": "love",
     "group": "map",
-    "description": "deep love and tenderness toward the people and things in their life",
+    "description": "deep love and tenderness",
     "banned": [
       "\\blov(?:e|es|ed|ing|er|ers|ely)\\b",
       "\\badore\\w*",
@@ -207,7 +207,7 @@
   {
     "label": "excitement",
     "group": "map",
-    "description": "bubbling excitement about something that is about to begin",
+    "description": "bubbling excitement about what is about to happen",
     "banned": [
       "\\bexcit\\w*",
       "\\bthrill\\w*",
@@ -224,7 +224,7 @@
   {
     "label": "amusement",
     "group": "map",
-    "description": "amusement at a silly, harmless little incident",
+    "description": "amusement at something silly and harmless",
     "banned": [
       "\\bamus\\w*",
       "\\bhumou?r\\w*",
@@ -242,7 +242,7 @@
   {
     "label": "jealousy",
     "group": "map",
-    "description": "jealousy at another person's good luck or success",
+    "description": "jealousy at another person's good fortune",
     "banned": [
       "\\bjealous\\w*",
       "\\benvy\\w*",
@@ -258,7 +258,7 @@
   {
     "label": "disgust",
     "group": "map",
-    "description": "strong disgust at something rotten or filthy",
+    "description": "strong disgust at something revolting",
     "banned": [
       "\\bdisgust\\w*",
       "\\brevolt\\w*",
@@ -329,7 +329,7 @@
   {
     "label": "anxiety",
     "group": "map",
-    "description": "anxiety about an uncertain upcoming event",
+    "description": "anxiety about an uncertain outcome",
     "banned": [
       "\\banxi\\w*",
       "\\bworr\\w*",
@@ -346,7 +346,7 @@
   {
     "label": "desperation",
     "group": "map",
-    "description": "desperation as every option for solving a problem seems to run out",
+    "description": "desperation as every option seems to run out",
     "banned": [
       "\\bdesperat\\w*",
       "\\bhopeless\\w*",
