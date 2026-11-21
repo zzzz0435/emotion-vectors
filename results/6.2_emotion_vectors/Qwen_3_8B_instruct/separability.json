@@ -1,0 +1,18 @@
+{
+  "9": {
+    "auroc": 0.9974999999999999,
+    "separable": true
+  },
+  "14": {
+    "auroc": 0.9875,
+    "separable": true
+  },
+  "18": {
+    "auroc": 0.9825,
+    "separable": true
+  },
+  "23": {
+    "auroc": 1.0,
+    "separable": true
+  }
+}
