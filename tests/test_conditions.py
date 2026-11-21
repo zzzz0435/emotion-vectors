@@ -94,6 +94,23 @@ def test_clean_only_core_and_anger_resid_pair():
     assert not any(n.startswith(("pain__clean", "compassion__clean")) for n in names)
 
 
+FROZEN_L14_ANGER_FALLBACK = {
+    **FROZEN_L14_PAIN_FALLBACK, "alpha_individual": {"pain": 1.6, "anger": 1.4},
+    "induction": {**FROZEN_L14_PAIN_FALLBACK["induction"], "anger": "fallback"}}
+
+
+def test_fallback_and_contaminated_gets_clean_at_individual_alpha():
+    # pain is fallback but NOT contaminated in the L14 fixture -> no pain__clean, count unchanged
+    names = {c.name for c in build_conditions(FROZEN_L14_PAIN_FALLBACK, LABELS)}
+    assert len(names) == 298 and not any(n.startswith("pain__clean") for n in names)
+    # anger is fallback AND contaminated -> anger__clean@+α_ind (R20)
+    conds = {c.name: c for c in build_conditions(FROZEN_L14_ANGER_FALLBACK, LABELS)}
+    assert len(conds) == 298 + 2 + 40 + 20      # anger, anger__clean, concepts, randoms @1.4
+    c = conds["anger__clean@+1.4000"]
+    assert (c.kind, c.source, c.alpha) == ("clean", "clean:anger__clean", 1.4)
+    assert "anger@+1.4000" in conds and not any(n.startswith("pain__clean") for n in conds)
+
+
 def test_text_and_baseline():
     conds = {c.name: c for c in build_conditions(FROZEN_L18, LABELS)}
     assert conds["text_anger"].induce == "You feel anger." and conds["text_anger"].alpha == 0.0

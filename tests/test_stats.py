@@ -10,7 +10,7 @@ from emolab import integrity
 from emolab.conditions import build_conditions, condition_name, load_labels
 from emolab.stats import (beats_controls, bootstrap_ci, exploratory, holm, interpret,
                           load_score_table, primary_tests, secondary_tests,
-                          wilcoxon_two_sided)
+                          signed_rank_sums, wilcoxon_two_sided)
 
 REPO = Path(__file__).resolve().parents[1]
 STATS_PY = REPO / "scripts/emolab/stats.py"
@@ -91,9 +91,23 @@ def test_wilcoxon_drops_nan_pairs():
 
 def test_wilcoxon_degenerate_is_nan():
     p, n = wilcoxon_two_sided(np.zeros(5))
-    assert np.isnan(p) and n == 5
+    assert np.isnan(p) and n == 0
     p, n = wilcoxon_two_sided(np.array([np.nan, np.nan]))
     assert np.isnan(p) and n == 0
+
+
+def test_wilcoxon_n_excludes_zero_differences():
+    p, n = wilcoxon_two_sided(np.array([0, 0, 0, 1, 2, 3, 4, 5, 6.0]))
+    assert n == 6 and p < 0.05
+
+
+SKEW = np.r_[-0.01 - 0.0001 * np.arange(60), 0.5 + 0.01 * np.arange(10)]  # mean > 0, W+ < W−
+
+
+def test_signed_rank_sums_on_skewed_differences():
+    p, n = wilcoxon_two_sided(SKEW)
+    assert SKEW.mean() > 0.05 and p < 0.01 and n == 70
+    assert signed_rank_sums(np.append(SKEW, [0.0, np.nan])) == (655.0, 1830.0)
 
 
 def test_bootstrap_ci_brackets_mean_and_is_deterministic():
@@ -154,13 +168,43 @@ def test_primary_h1_supported_on_planted_effect():
         assert r["supported"] is True and r["gate"] is True
         assert r["n"] == N and r["mean_d"] == pytest.approx(1.0, abs=0.1)
         assert r["ci_low"] < r["mean_d"] < r["ci_high"] and r["p_holm"] < 0.05
+        assert r["w_plus"] > r["w_minus"]
     h3 = row(p, "H3")
     assert h3["supported"] is True and h3["gate"] is None
-    assert h3["x_effect"] > 0.5 and abs(h3["y_effect"]) < 0.1
+    assert h3["x_effect"] > 0.5 and h3["x_ci_low"] > 0.5 and abs(h3["y_effect"]) < 0.1
+    assert h3["y_ci_low"] <= h3["y_effect"] <= h3["y_ci_high"]
     for col in ("hypothesis", "task", "contrast", "n", "mean_d", "ci_low", "ci_high", "p",
-                "p_holm", "gate", "supported", "untestable_reason", "alpha_note",
-                "clean_n", "clean_mean_d", "clean_p", "clean_gate", "clean_pass"):
+                "p_holm", "w_plus", "w_minus", "gate", "supported", "untestable_reason",
+                "alpha_note", "clean_n", "clean_mean_d", "clean_p", "clean_w_plus",
+                "clean_w_minus", "clean_gate", "clean_pass"):
         assert col in p.columns
+
+
+def test_supported_requires_rank_direction():
+    # R22: mean_d > 0 and Holm p < .05, but the signed ranks point the other way (W+ < W−)
+    st = make_scores(shifts={"h1_rating": {nm("anger"): SKEW}}, n=len(SKEW), noise=0.0)
+    p = primary_tests(st, FROZEN)
+    h1 = row(p, "H1")
+    assert h1["mean_d"] > 0 and h1["p_holm"] < 0.05 and h1["gate"] is True
+    assert (h1["w_plus"], h1["w_minus"]) == (655.0, 1830.0)
+    assert h1["supported"] is False
+    assert "W+ ≤ W−" in "\n".join(interpret(p, FROZEN))
+
+
+def test_gate_alone_flips_supported():
+    shifts = {"h1_rating": {nm("anger"): 1.0, **{nm(c): 10.0 for c in CONCEPTS[:3]}}}
+    h1 = row(primary_tests(make_scores(shifts=shifts), FROZEN), "H1")
+    assert h1["p_holm"] < 0.05 and h1["mean_d"] > 0 and h1["w_plus"] > h1["w_minus"]
+    assert h1["gate"] is False and h1["supported"] is False   # beats only 37 concepts
+
+
+def test_nan_items_reduce_n():
+    st = make_scores(shifts=PLANT)
+    items = st["h1_rating"].index
+    st["h1_rating"].loc[items[:5], nm("anger")] = np.nan
+    st["h1_rating"].loc[items[5], [nm(c) for c in CONCEPTS[:10]]] = np.nan  # item kept
+    h1 = row(primary_tests(st, FROZEN), "H1")
+    assert h1["n"] == N - 5 and h1["supported"] is True
 
 
 def test_primary_h1_not_supported_when_concepts_shift_equally():
@@ -244,6 +288,19 @@ def test_clean_version_must_also_pass():
     for h in ("H1", "H3", "H4"):
         assert row(p, h)["clean_pass"] is True and row(p, h)["supported"] is True
         assert row(p, h)["clean_gate"] is (None if h == "H3" else True)
+        assert row(p, h)["clean_w_plus"] > row(p, h)["clean_w_minus"]
+
+
+def test_fallback_contaminated_clean_uses_individual_alpha():
+    # R20: anger fallback + contaminated -> clean is anger__clean@α_ind vs concepts@α_ind
+    fz = frozen(induction={**FROZEN["induction"], "anger": "fallback"},
+                alpha_individual={"anger": 1.6}, contamination_at_layer=["anger"])
+    shifts = {"h1_rating": {nm("anger", 1.6): 1.0, nm("anger__clean", 1.6): 1.0,
+                            **{nm(c): 5.0 for c in CONCEPTS}}}   # concepts@α_max would swamp it
+    h1 = row(primary_tests(make_scores(fz, shifts=shifts), fz), "H1")
+    assert h1["untestable_reason"] is None and "+1.6000" in h1["contrast"]
+    assert h1["clean_n"] == N and h1["clean_mean_d"] == pytest.approx(1.0, abs=0.1)
+    assert h1["clean_pass"] is True and h1["supported"] is True
 
 
 # ---------- secondary ----------
@@ -279,6 +336,48 @@ def test_secondary_untestable_rules():
     assert row(s, "H5")["untestable_reason"] == "未能誘發"
     assert row(s, "pain_resid3")["untestable_reason"] == "正負面軸不可靠"
     assert row(s, "H5")["supported"] is None and np.isnan(row(s, "H5")["p_holm"])
+
+
+def test_secondary_sign_conventions():
+    shifts = {"h2": {nm("compassion", EQ["compassion"], True): -1.0, nm("pain__resid3"): 1.0},
+              "h1_rating": {nm("anger", EQ["anger"], True): 1.0, nm("anger__resid2"): 1.0}}
+    s = secondary_tests(make_scores(shifts=shifts), FROZEN)
+    for h, sign in (("H5", -1), ("anger_vs_sadness", 1), ("pain_resid3", 1),
+                    ("anger_resid2_vs_resid3", 1)):
+        r = row(s, h)
+        assert np.sign(r["mean_d"]) == sign and r["supported"] is True
+        assert np.sign(r["w_plus"] - r["w_minus"]) == sign
+    assert row(s, "pain_resid3")["gate"] is True
+    flipped = {"h2": {nm("compassion", EQ["compassion"], True): 1.0},
+               "h1_rating": {nm("anger", EQ["anger"], True): -1.0}}
+    s = secondary_tests(make_scores(shifts=flipped), FROZEN)
+    for h in ("H5", "anger_vs_sadness"):
+        assert row(s, h)["p_holm"] < 0.05 and row(s, h)["supported"] is False
+
+
+def test_secondary_clean_variants():
+    # R21: clean variant where it can be built; resid rows of a contaminated emotion untestable
+    fz = frozen(contamination_at_layer=["anger", "compassion", "pain"])
+    shifts = {"h2": {nm("compassion", EQ["compassion"], True): -1.0,
+                     nm("compassion__clean", EQ["compassion"], True): -1.0,
+                     nm("pain_painaxis"): 1.0},
+              "h1_rating": {nm("anger", EQ["anger"], True): 1.0}}   # anger__clean: no effect
+    s = secondary_tests(make_scores(fz, shifts=shifts), fz)
+    h5 = row(s, "H5")
+    assert h5["clean_n"] == N and h5["clean_mean_d"] < -0.5
+    assert h5["clean_pass"] is True and h5["supported"] is True
+    avs = row(s, "anger_vs_sadness")
+    assert avs["p_holm"] < 0.05 and avs["clean_pass"] is False and avs["supported"] is False
+    pp = row(s, "pain_painaxis_vs_pain")       # two-sided: Bonferroni p × 3 only
+    assert pp["clean_mean_d"] > 0.5 and pp["clean_p"] * 3 < 0.05 and pp["clean_pass"] is True
+    for h in ("compassion_resid3", "pain_resid3", "anger_resid2_vs_resid3"):
+        r = row(s, h)
+        assert r["untestable_reason"] == "受汙染，未建立乾淨版" and r["supported"] is None
+        assert np.isnan(r["p_holm"])
+    testable = s[(s["hypothesis"] != "text_vs_vector") & s["untestable_reason"].isna()]
+    assert len(testable) == 3
+    assert row(s, "H5")["clean_pass"] is True and row(secondary_tests(
+        make_scores(fz, shifts=shifts), frozen()), "H5")["clean_pass"] is None
 
 
 # ---------- exploratory ----------
@@ -325,43 +424,84 @@ def test_physical_harm_subset():
 
 # ---------- interpretation ----------
 
-def _prim(**status):
-    rows = []
+def _prim(rows=None, **status):
+    """Synthetic primary table. status: H1..H4 -> True/False/None, f"{h}_reason";
+    rows: {h: {column: value}} overrides."""
+    out = []
     for h in ("H1", "H2", "H3", "H4"):
         s = status.get(h, False)
-        rows.append({"hypothesis": h, "task": "h1_rating", "contrast": "", "n": 30,
-                     "mean_d": 0.5 if s else -0.1, "ci_low": 0.1, "ci_high": 0.9,
-                     "p": 0.001 if s else 0.5, "p_holm": 0.004 if s else 0.9,
-                     "gate": None if h == "H3" else bool(s), "supported": s,
-                     "untestable_reason": status.get(h + "_reason"), "alpha_note": None,
-                     "clean_n": np.nan, "clean_mean_d": np.nan, "clean_p": np.nan,
-                     "clean_gate": None, "clean_pass": None,
-                     "x_effect": status.get("x", 0.6), "y_effect": status.get("y", 0.1)})
-    return pd.DataFrame(rows)
+        r = {"hypothesis": h, "task": "h1_rating", "contrast": "", "n": 30,
+             "mean_d": 0.5 if s else -0.1, "ci_low": 0.1, "ci_high": 0.9,
+             "p": 0.001 if s else 0.5, "p_holm": 0.004 if s else 0.9,
+             "w_plus": 400.0 if s else 100.0, "w_minus": 65.0 if s else 365.0,
+             "gate": None if h == "H3" else bool(s), "supported": s,
+             "untestable_reason": status.get(h + "_reason"), "alpha_note": None,
+             **{f"clean_{k}": np.nan for k in ("n", "mean_d", "p", "w_plus", "w_minus")},
+             "clean_gate": None, "clean_pass": None,
+             "x_effect": 0.6, "x_ci_low": 0.4, "x_ci_high": 0.8,
+             "y_effect": 0.1, "y_ci_low": -0.1, "y_ci_high": 0.3}
+        r.update((rows or {}).get(h, {}))
+        out.append(r)
+    return pd.DataFrame(out)
+
+
+def J(prim, fz=FROZEN):
+    return "\n".join(interpret(prim, fz))
 
 
 FORBIDDEN = ("AI 會生氣", "AI 會痛", "模型會生氣", "模型會痛", "感到憤怒", "感到疼痛")
+OPP = {"H3": {"y_effect": -0.3, "y_ci_low": -0.5, "y_ci_high": -0.1}}
+SAME = {"H3": {"y_effect": 0.2, "y_ci_low": 0.1, "y_ci_high": 0.3}}
+FUZZY = {"H3": {"y_effect": -0.0001, "y_ci_low": -0.1, "y_ci_high": 0.1}}
 
 
 def test_interpret_sentences_follow_spec_rules():
-    t = "\n".join(interpret(_prim(H1=True), FROZEN))
+    t = J(_prim(H1=True))
     assert "憤怒的效果可以用三個通用軸解釋" in t
-    t = "\n".join(interpret(_prim(H1=True, H4=True), FROZEN))
+    t = J(_prim(H1=True, H4=True))
     assert "憤怒有超出三個通用軸的作用" in t and "可以用三個通用軸解釋" not in t
-    t = "\n".join(interpret(_prim(H1=True, H3=True), FROZEN))
+    t = J(_prim(H1=True, H3=True))
     assert "憤怒和恐懼的作用不同，但差異可以用三個通用軸（很可能是掌控感）解釋" in t
-    assert "只扣兩個軸" in t
-    t = "\n".join(interpret(_prim(H3=True, x=0.6, y=-0.3), FROZEN))
-    assert "方向相反" in t and "最有力的證據" in t
-    t = "\n".join(interpret(_prim(H3=True, x=0.6, y=0.2), FROZEN))
-    assert "方向相同" in t and "大小不同" in t
-    t = "\n".join(interpret(_prim(H3=None, H3_reason="模型內部無法區分憤怒與恐懼"), FROZEN))
+    assert "只扣兩個軸" in t and "只扣掉了" not in t      # full V/A/D and V/A: no caveats
+    t = J(_prim(H3=None, H3_reason="模型內部無法區分憤怒與恐懼"))
     assert "無法判斷" in t and "模型內部無法區分憤怒與恐懼" in t
-    t = "\n".join(interpret(_prim(), FROZEN))
+    t = J(_prim())
     assert "不支持" in t
-    for st in ({}, {"H1": True}, {"H4": True}, {"H3": True, "x": 0.6, "y": -0.3}):
-        t = "\n".join(interpret(_prim(**st), FROZEN))
-        assert not any(f in t for f in FORBIDDEN)
+    for st in ({}, {"H1": True}, {"H4": True}, {"H3": True}):
+        assert not any(f in J(_prim(rows=OPP, **st)) for f in FORBIDDEN)
+
+
+def test_interpret_h3_direction_needs_ci():
+    t = J(_prim(rows=OPP, H3=True))
+    assert "方向相反" in t and "最有力的證據" in t
+    t = J(_prim(rows=SAME, H3=True))
+    assert "兩者只是大小不同" in t and "最有力的證據" not in t
+    t = J(_prim(rows=FUZZY, H3=True))       # opposite point estimates, CI of fear spans 0
+    assert "無法確定方向" in t and "最有力的證據" not in t and "兩者只是大小不同" not in t
+    t = J(_prim(rows={"H3": {"y_ci_low": np.nan}}, H3=True))
+    assert "無法計算" in t and "最有力的證據" not in t
+
+
+def test_interpret_rule2_and_always_states_partial_axes():
+    fz = frozen(residual_removed_axes={**FROZEN["residual_removed_axes"],
+                                       "anger__resid3": ["V", "D"], "anger__resid2": ["V"]})
+    lines = interpret(_prim(H1=True, H3=True), fz)
+    r2 = next(x for x in lines if "憤怒和恐懼的作用不同" in x)
+    assert "H4 實際只扣掉了正負面（V）、掌控感（D）" in r2
+    assert "「只扣兩個軸」的版本實際只扣掉了正負面（V）。" in r2
+    lines = interpret(_prim(), fz)            # no combined rule fires: still stated
+    assert any("只扣掉了正負面（V）、掌控感（D）" in x and "激動程度（A）不可靠" in x
+               for x in lines)
+    fz2 = frozen(residual_removed_axes={**FROZEN["residual_removed_axes"],
+                                        "anger__resid3": ["V", "D"]})   # resid2 = V, A: full
+    r2 = next(x for x in interpret(_prim(H1=True, H3=True), fz2) if "作用不同" in x)
+    assert "「只扣兩個軸」的版本實際只扣掉了" not in r2
+
+
+def test_why_not_reports_nan_mean():
+    t = J(_prim(rows={"H2": {"mean_d": np.nan, "p": np.nan, "p_holm": np.nan}}))
+    line = next(x for x in t.splitlines() if x.startswith("H2"))
+    assert "平均差無法計算" in line and "平均差不是正的" not in line
 
 
 def test_interpret_names_removed_axes():
@@ -371,6 +511,40 @@ def test_interpret_names_removed_axes():
     assert "超出三個通用軸" not in t
     s = next(x for x in t.splitlines() if "超出" in x)
     assert "正負面" in s and "掌控感" in s and "激動程度" not in s and "這幾個軸" in s
+
+
+# ---------- required frozen keys (R23) ----------
+
+KEY_USERS = {"alpha_max": "pse", "alpha_eq": "pse", "alpha_individual": "pe",
+             "induction": "pse", "contamination_at_layer": "pse",
+             "separability_at_layer": "pe", "residual_status_at_layer": "pse",
+             "residual_removed_axes": "i"}
+
+
+@pytest.fixture(scope="module")
+def small():
+    return make_scores(n=8)
+
+
+@pytest.mark.parametrize("key", sorted(KEY_USERS))
+def test_missing_frozen_key_raises(key, small):
+    fz = {k: v for k, v in FROZEN.items() if k != key}
+    calls = {"p": lambda: primary_tests(small, fz), "s": lambda: secondary_tests(small, fz),
+             "e": lambda: exploratory(small, fz, None), "i": lambda: interpret(_prim(), fz)}
+    for c in KEY_USERS[key]:
+        with pytest.raises(ValueError, match=key):
+            calls[c]()
+
+
+def test_missing_frozen_entry_raises(small):
+    ind = {k: v for k, v in FROZEN["induction"].items() if k != "pain"}
+    with pytest.raises(ValueError, match="pain"):
+        primary_tests(small, frozen(induction=ind))      # no "missing = ok" default
+    with pytest.raises(ValueError, match="pain"):         # fallback without its α
+        primary_tests(small, frozen(induction={**FROZEN["induction"], "pain": "fallback"}))
+    rra = {k: v for k, v in FROZEN["residual_removed_axes"].items() if k != "anger__resid3"}
+    with pytest.raises(ValueError, match="anger__resid3"):
+        interpret(_prim(), frozen(residual_removed_axes=rra))
 
 
 # ---------- integrity & script ----------
@@ -416,8 +590,10 @@ def _write_scores(st, d):
 
 def test_01_stats_end_to_end(tmp_path):
     mod = _load_script()
-    fz = frozen(stats_sha256=integrity.file_sha256(STATS_PY),
-                conditions_sha256=integrity.file_sha256(CONDITIONS_PY))
+    hashed = mod.hashed_files()
+    assert set(hashed) == {"stats_sha256", "conditions_sha256", "concepts_sha256",
+                           "vignettes_sha256", "moralchoice_sha256"}
+    fz = frozen(**{k: integrity.file_sha256(p) for k, p in hashed.items()})
     _write_scores(make_scores(fz, shifts=PLANT), tmp_path / "scores")
     fpath = tmp_path / "frozen_config.json"
     fpath.write_text(json.dumps(fz), encoding="utf-8")
@@ -434,9 +610,14 @@ def test_01_stats_end_to_end(tmp_path):
     md = (out / "interpretation.md").read_text(encoding="utf-8")
     assert "18" in md and "⚠" not in md
 
-    fpath.write_text(json.dumps({**fz, "stats_sha256": "0" * 64}), encoding="utf-8")
-    with pytest.raises(SystemExit):
-        mod.main(args)
+    for key, fname in (("moralchoice_sha256", "6.6_moralchoice_harm.json"),
+                       ("concepts_sha256", "6.2_concepts.json"),
+                       ("vignettes_sha256", "6.6_punishment_vignettes.json"),
+                       ("stats_sha256", "stats.py")):
+        fpath.write_text(json.dumps({**fz, key: "0" * 64}), encoding="utf-8")
+        with pytest.raises(SystemExit) as ei:
+            mod.main(args)
+        assert fname in str(ei.value.code)
     mod.main(args + ["--allow-changed-analysis"])
     md = (out / "interpretation.md").read_text(encoding="utf-8")
     assert md.startswith("⚠ 凍結後改過分析程式：以下所有結果僅屬探索性") or \

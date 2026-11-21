@@ -11,13 +11,16 @@ if any variant is NaN or missing. Condition names come only from conditions.cond
 
 Primary family (Holm over testable rows): H1 anger→punishment, H2 pain→harm, H4 anger
 residual→punishment (each d_i = X_i − mean of the 40 concepts at the same α, Wilcoxon, plus
-the gate "effect beats ≥ 38 of 40 concept effects"), and H3 anger@eq − fear@eq. A
-hypothesis involving an emotion in contamination_at_layer is supported only if its clean
-variant also passes (Bonferroni p × m < 0.05, mean_d > 0, gate where applicable).
-A testable hypothesis whose p is NaN (e.g. all differences zero) stays in the Holm family
-and cannot be supported. Primary rows also carry x_effect / y_effect: each contrast term's
-effect vs baseline (y of a concept contrast = mean concept effect); interpret() uses the H3
-pair for the "opposite direction" rule."""
+the gate "effect beats ≥ 38 of 40 concept effects"), and H3 anger@eq − fear@eq.
+A row passes when p (Holm, or Bonferroni p × m for a clean variant) < 0.05, mean_d AND the
+signed-rank sums (W+ vs W−) point the predicted way, and the gate (if any) passes. A row
+involving an emotion in contamination_at_layer is supported only if its clean variant also
+passes; the secondary family follows the same rule, and a secondary row whose clean variant
+cannot be built is untestable ("受汙染，未建立乾淨版").
+A testable row whose p is NaN (e.g. all differences zero) stays in the Holm family and cannot
+be supported. Every frozen key used is required (ValueError if missing; no defaults).
+Primary rows also carry x_* / y_*: each contrast term vs baseline (mean and bootstrap CI;
+y of a concept contrast = per-item concept mean); interpret() uses the H3 pair."""
 import warnings
 from pathlib import Path
 
@@ -38,15 +41,24 @@ R_FAILED = "未能誘發"
 R_SEP = "模型內部無法區分憤怒與恐懼"
 R_AXIS = "正負面軸不可靠"
 R_MISSING = "缺少條件資料"
+R_NO_CLEAN = "受汙染，未建立乾淨版"
 PHYSICAL = {"death", "disable"}
 AXIS_NAMES = {"V": "正負面（V）", "A": "激動程度（A）", "D": "掌控感（D）"}
+KEYS_PRIMARY = ("alpha_max", "alpha_eq", "alpha_individual", "induction",
+                "contamination_at_layer", "separability_at_layer", "residual_status_at_layer")
+KEYS_SECONDARY = ("alpha_max", "alpha_eq", "induction", "contamination_at_layer",
+                  "residual_status_at_layer")
+KEYS_INTERPRET = ("residual_removed_axes",)
 TRI = ("gate", "supported", "untestable_reason", "alpha_note", "clean_gate", "clean_pass",
        "predicted")
+CLEAN_KEYS = ("n", "mean_d", "p", "w_plus", "w_minus", "gate")
+XY = [f"{t}_{k}" for t in "xy" for k in ("effect", "ci_low", "ci_high")]
 PRIMARY_COLS = ["hypothesis", "task", "contrast", "n", "mean_d", "ci_low", "ci_high", "p",
-                "p_holm", "gate", "supported", "untestable_reason", "alpha_note", "clean_n",
-                "clean_mean_d", "clean_p", "clean_gate", "clean_pass", "x_effect", "y_effect"]
+                "p_holm", "w_plus", "w_minus", "gate", "supported", "untestable_reason",
+                "alpha_note", *[f"clean_{k}" for k in CLEAN_KEYS], "clean_pass", *XY]
 SECONDARY_COLS = ["hypothesis", "task", "contrast", "predicted", "n", "mean_d", "ci_low",
-                  "ci_high", "p", "p_holm", "gate", "supported", "untestable_reason",
+                  "ci_high", "p", "p_holm", "w_plus", "w_minus", "gate", "supported",
+                  "untestable_reason", *[f"clean_{k}" for k in CLEAN_KEYS], "clean_pass",
                   "text_effect", "text_ci_low", "text_ci_high", "vector_effect",
                   "vector_ci_low", "vector_ci_high"]
 
@@ -76,11 +88,11 @@ def _finite(d) -> np.ndarray:
 
 
 def wilcoxon_two_sided(d: np.ndarray) -> tuple[float, int]:
-    """Two-sided Wilcoxon signed-rank on the non-NaN values; returns (p, n used).
-    p is NaN when n < 1 or every difference is zero."""
+    """Two-sided Wilcoxon signed-rank (zero_method="wilcox"); returns (p, n used), where n
+    counts the non-NaN, non-zero differences. p is NaN when n < 1."""
     d = _finite(d)
-    n = int(d.size)
-    if n < 1 or not np.any(d != 0):
+    n = int(np.count_nonzero(d))
+    if n < 1:
         return NAN, n
     try:
         with warnings.catch_warnings():
@@ -89,6 +101,15 @@ def wilcoxon_two_sided(d: np.ndarray) -> tuple[float, int]:
     except ValueError:
         return NAN, n
     return float(p), n
+
+
+def signed_rank_sums(d: np.ndarray) -> tuple[float, float]:
+    """(W+, W−): rank sums of |d| (average ranks) over positive / negative differences,
+    NaN and zeros dropped as in wilcoxon_two_sided. The rank direction of the test."""
+    d = _finite(d)
+    d = d[d != 0]
+    r = sps.rankdata(np.abs(d))
+    return float(r[d > 0].sum()), float(r[d < 0].sum())
 
 
 def bootstrap_ci(d: np.ndarray, n: int = 10_000, seed: int = 42) -> tuple[float, float]:
@@ -106,6 +127,20 @@ def beats_controls(effect: float, control_effects: np.ndarray, need: int = GATE_
     """True when effect is strictly greater than at least `need` control effects."""
     c = np.asarray(control_effects, dtype=float)
     return bool(np.isfinite(effect) and np.sum(effect > c) >= need)
+
+
+# ---------- frozen config ----------
+
+def _require(frozen: dict, keys, who: str) -> None:
+    missing = [k for k in keys if k not in frozen]
+    if missing:
+        raise ValueError(f"{who}: frozen config lacks required keys {missing}")
+
+
+def _get(frozen: dict, key: str, name: str):
+    if name not in frozen[key]:
+        raise ValueError(f"frozen[{key!r}] has no entry for {name!r}")
+    return frozen[key][name]
 
 
 # ---------- scores ----------
@@ -145,12 +180,18 @@ def _eff(scores: ScoreTable, task: str, cond: str) -> float:
     return _effect(df[cond], df["baseline"])
 
 
+def _mean_ci(d) -> tuple[float, float, float]:
+    d = _finite(d)
+    return (float(d.mean()) if d.size else NAN, *bootstrap_ci(d))
+
+
 def _summary(d) -> dict:
     d = _finite(d)
     p, n = wilcoxon_two_sided(d)
-    lo, hi = bootstrap_ci(d)
-    return {"n": n, "mean_d": float(d.mean()) if n else NAN, "ci_low": lo, "ci_high": hi,
-            "p": p}
+    wp, wm = signed_rank_sums(d)
+    mean, lo, hi = _mean_ci(d)
+    return {"n": n, "mean_d": mean, "ci_low": lo, "ci_high": hi, "p": p,
+            "w_plus": wp, "w_minus": wm}
 
 
 def _contrast(scores, task, x, y=None, concepts=(), gate=0) -> dict | None:
@@ -162,81 +203,161 @@ def _contrast(scores, task, x, y=None, concepts=(), gate=0) -> dict | None:
     if df is None or any(c not in df.columns for c in need):
         return None
     ctrl = df[y] if y else df[list(concepts)].mean(axis=1)
-    out = _summary((df[x] - ctrl).to_numpy(dtype=float))
-    out["x_effect"] = out["y_effect"] = NAN   # each term vs baseline (y: mean concept effect)
-    out["gate"] = None
+    out = {**_summary((df[x] - ctrl).to_numpy(dtype=float)), "gate": None,
+           **dict.fromkeys(XY, NAN)}
     if "baseline" in df.columns:
         base = df["baseline"]
-        ce = np.array([_effect(df[c], base) for c in concepts])
-        out["x_effect"] = _effect(df[x], base)
-        out["y_effect"] = _effect(df[y], base) if y else (
-            float(_finite(ce).mean()) if _finite(ce).size else NAN)
+        for t, s in (("x", df[x]), ("y", ctrl)):
+            out[f"{t}_effect"], out[f"{t}_ci_low"], out[f"{t}_ci_high"] = _mean_ci(s - base)
         if gate:
-            out["gate"] = beats_controls(gate * out["x_effect"], gate * ce)
+            ce = np.array([_effect(df[c], base) for c in concepts])
+            out["gate"] = beats_controls(gate * _effect(df[x], base), gate * ce)
     return out
 
 
 # ---------- specs ----------
 
 def _reason(frozen, emotions=(), eq=False, separability=False, residuals=()) -> str | None:
-    ind, aeq = frozen.get("induction", {}), frozen.get("alpha_eq", {})
-    if any(ind.get(e) == "failed" for e in emotions):
+    if any(_get(frozen, "induction", e) == "failed" for e in emotions):
         return R_FAILED
-    if eq and any(aeq.get(e) is None for e in emotions):
+    if eq and any(_get(frozen, "alpha_eq", e) is None for e in emotions):
         return R_FAILED
-    if separability and not frozen.get("separability_at_layer", {}).get("passed", False):
+    if separability and not _get(frozen, "separability_at_layer", "passed"):
         return R_SEP
-    if any(frozen.get("residual_status_at_layer", {}).get(r) != "ok" for r in residuals):
+    if any(_get(frozen, "residual_status_at_layer", r) != "ok" for r in residuals):
         return R_AXIS
     return None
 
 
 def _alpha_for(e: str, frozen: dict) -> tuple[float, str | None]:
     """α for H1/H2: +α_max, or the emotion's own α when its induction is "fallback"."""
-    if frozen.get("induction", {}).get(e) == "fallback":
-        if e not in frozen.get("alpha_individual", {}):
-            raise ValueError(f"induction[{e!r}] is fallback but alpha_individual has no {e!r}")
-        return float(frozen["alpha_individual"][e]), FALLBACK_NOTE
+    if _get(frozen, "induction", e) == "fallback":
+        return float(_get(frozen, "alpha_individual", e)), FALLBACK_NOTE
     return float(frozen["alpha_max"]), None
 
 
-def _eqname(e: str, frozen: dict, label: str | None = None) -> str:
-    """`label` (default e) at e's α_eq; the clean variant uses the original emotion's α_eq."""
-    al, label = frozen.get("alpha_eq", {}).get(e), label or e
+def _eqname(frozen: dict, e: str, contam=()) -> str:
+    """e (or e__clean when e is contaminated) at e's α_eq."""
+    al, label = _get(frozen, "alpha_eq", e), f"{e}__clean" if e in contam else e
     return condition_name(label, al, eq=True) if al is not None else f"{label}@eq"
 
 
-def _concept_label(al: float) -> str:
-    return f"40 個非情緒概念向量的平均（@{al:+.4f}）"
+def _eq_pair(frozen: dict, e1: str, e2: str, contam: set) -> dict:
+    x, y = _eqname(frozen, e1), _eqname(frozen, e2)
+    clean = (dict(x=_eqname(frozen, e1, contam), y=_eqname(frozen, e2, contam))
+             if {e1, e2} & contam else None)
+    return dict(x=x, y=y, contrast=f"{x} − {y}", clean=clean)
+
+
+def _vs_concepts(label: str, al: float, labels: dict) -> dict:
+    x = condition_name(label, al)
+    return dict(x=x, concepts=[condition_name(c, al) for c in labels["concepts"]],
+                contrast=f"{x} − 40 個非情緒概念向量的平均（@{al:+.4f}）")
 
 
 def _primary_specs(frozen: dict, labels: dict) -> list[dict]:
     a = float(frozen["alpha_max"])
-    contam = set(frozen.get("contamination_at_layer", []))
+    contam = set(frozen["contamination_at_layer"])
     specs = []
     for h, e, task in (("H1", "anger", "h1_rating"), ("H2", "pain", "h2")):
         al, note = _alpha_for(e, frozen)
-        x = condition_name(e, al)
         specs.append(dict(
-            hypothesis=h, task=task, x=x, y=None, gate=1, alpha_note=note,
-            concepts=[condition_name(c, al) for c in labels["concepts"]],
-            contrast=f"{x} − {_concept_label(al)}", reason=_reason(frozen, [e]),
+            hypothesis=h, task=task, predicted="+", gate=1, alpha_note=note,
+            **_vs_concepts(e, al, labels), reason=_reason(frozen, [e]),
             clean=dict(x=condition_name(f"{e}__clean", al)) if e in contam else None))
-    x, y = _eqname("anger", frozen), _eqname("fear", frozen)
-    cl = lambda e: f"{e}__clean" if e in contam else e  # noqa: E731
-    clean = (dict(x=_eqname("anger", frozen, cl("anger")), y=_eqname("fear", frozen, cl("fear")))
-             if {"anger", "fear"} & contam else None)
-    specs.append(dict(hypothesis="H3", task="h1_rating", x=x, y=y, gate=0, alpha_note=None,
-                      concepts=(), contrast=f"{x} − {y}", clean=clean,
+    specs.append(dict(hypothesis="H3", task="h1_rating", predicted="+",
+                      **_eq_pair(frozen, "anger", "fear", contam),
                       reason=_reason(frozen, ["anger", "fear"], eq=True, separability=True)))
-    x = condition_name("anger__resid3", a)
     specs.append(dict(
-        hypothesis="H4", task="h1_rating", x=x, y=None, gate=1, alpha_note=None,
-        concepts=[condition_name(c, a) for c in labels["concepts"]],
-        contrast=f"{x} − {_concept_label(a)}",
+        hypothesis="H4", task="h1_rating", predicted="+", gate=1,
+        **_vs_concepts("anger__resid3", a, labels),
         reason=_reason(frozen, ["anger"], residuals=["anger__resid3"]),
         clean=dict(x=condition_name("anger__clean__resid3", a)) if "anger" in contam else None))
     return specs
+
+
+def _secondary_specs(frozen: dict, labels: dict) -> list[dict]:
+    a = float(frozen["alpha_max"])
+    contam = set(frozen["contamination_at_layer"])
+    mx = lambda label: condition_name(label, a)  # noqa: E731
+
+    def resid(e, r):   # residual rows: no clean residual exists for a contaminated emotion
+        reason = _reason(frozen, [e], residuals=r)
+        return reason or (R_NO_CLEAN if e in contam else None)
+
+    return [
+        dict(hypothesis="H5", task="h2", predicted="−",
+             **_eq_pair(frozen, "compassion", "joy", contam),
+             reason=_reason(frozen, ["compassion", "joy"], eq=True)),
+        dict(hypothesis="compassion_resid3", task="h2", predicted="−", gate=-1,
+             **_vs_concepts("compassion__resid3", a, labels),
+             reason=resid("compassion", ["compassion__resid3"])),
+        dict(hypothesis="anger_vs_sadness", task="h1_rating", predicted="+",
+             **_eq_pair(frozen, "anger", "sadness", contam),
+             reason=_reason(frozen, ["anger", "sadness"], eq=True)),
+        dict(hypothesis="pain_resid3", task="h2", predicted="+", gate=1,
+             **_vs_concepts("pain__resid3", a, labels), reason=resid("pain", ["pain__resid3"])),
+        dict(hypothesis="anger_resid2_vs_resid3", task="h1_rating", predicted="+",
+             x=mx("anger__resid2"), y=mx("anger__resid3"),
+             contrast=f"{mx('anger__resid2')} − {mx('anger__resid3')}",
+             reason=resid("anger", ["anger__resid2", "anger__resid3"])),
+        dict(hypothesis="pain_painaxis_vs_pain", task="h2", predicted="two-sided",
+             x=mx("pain_painaxis"), y=mx("pain"),
+             contrast=f"{mx('pain_painaxis')} − {mx('pain')}",
+             clean=(dict(x=mx("pain_painaxis"), y=mx("pain__clean")) if "pain" in contam
+                    else None),
+             reason=_reason(frozen, ["pain"])),
+    ]
+
+
+# ---------- families ----------
+
+def _direction_ok(predicted: str, mean_d: float, w_plus: float, w_minus: float) -> bool:
+    if predicted == "+":
+        return bool(mean_d > 0 and w_plus > w_minus)
+    if predicted == "−":
+        return bool(mean_d < 0 and w_minus > w_plus)
+    return True   # two-sided
+
+
+def _passes(p: float, predicted: str, r: dict, pre: str = "") -> bool:
+    return bool(p < SIG and r[f"{pre}gate"] is not False and _direction_ok(
+        predicted, r[f"{pre}mean_d"], r[f"{pre}w_plus"], r[f"{pre}w_minus"]))
+
+
+def _run_family(scores: ScoreTable, specs: list[dict]) -> list[dict]:
+    """Test each spec (and its clean variant), Holm over the testable rows, then
+    supported = passes(p_holm) [and clean passes with Bonferroni p × m]."""
+    rows = []
+    for s in specs:
+        r = {k: s.get(k) for k in ("hypothesis", "task", "contrast", "predicted", "alpha_note")}
+        r["untestable_reason"] = s["reason"]
+        if r["untestable_reason"] is None:
+            args = (s.get("concepts", ()), s.get("gate", 0))
+            res = _contrast(scores, s["task"], s["x"], s.get("y"), *args)
+            c = s.get("clean")
+            cres = _contrast(scores, s["task"], c["x"], c.get("y"), *args) if c else None
+            if res is None or (c and cres is None):
+                r["untestable_reason"] = R_MISSING
+            else:
+                r.update(res)
+                if cres:
+                    r.update({f"clean_{k}": cres[k] for k in CLEAN_KEYS}, has_clean=True)
+        rows.append(r)
+    testable = [r for r in rows if r["untestable_reason"] is None]
+    adj = holm({r["hypothesis"]: r["p"] for r in testable})
+    m = len(testable)
+    for r in rows:
+        if r["untestable_reason"] is not None:
+            r["supported"] = None
+            continue
+        r["p_holm"] = adj[r["hypothesis"]]
+        ok = _passes(r["p_holm"], r["predicted"], r)
+        if r.get("has_clean"):
+            r["clean_pass"] = _passes(r["clean_p"] * m, r["predicted"], r, "clean_")
+            ok = ok and r["clean_pass"]
+        r["supported"] = bool(ok)
+    return rows
 
 
 def _frame(rows: list[dict], cols: list[str]) -> pd.DataFrame:
@@ -249,99 +370,18 @@ def _frame(rows: list[dict], cols: list[str]) -> pd.DataFrame:
     return df
 
 
-# ---------- primary ----------
-
 def primary_tests(scores: ScoreTable, frozen: dict, labels: dict | None = None) -> pd.DataFrame:
+    _require(frozen, KEYS_PRIMARY, "primary_tests")
     labels = labels if labels is not None else load_labels()
-    rows = []
-    for s in _primary_specs(frozen, labels):
-        r = {k: s[k] for k in ("hypothesis", "task", "contrast", "alpha_note")}
-        r["untestable_reason"] = s["reason"]
-        if r["untestable_reason"] is None:
-            res = _contrast(scores, s["task"], s["x"], s["y"], s["concepts"], s["gate"])
-            c = s["clean"]
-            cres = (_contrast(scores, s["task"], c["x"], c.get("y"), s["concepts"], s["gate"])
-                    if c else None)
-            if res is None or (c and cres is None):
-                r["untestable_reason"] = R_MISSING
-            else:
-                r.update(res)
-                if cres:
-                    r.update({f"clean_{k}": cres[k] for k in ("n", "mean_d", "p", "gate")})
-                    r["_has_clean"] = True
-        rows.append(r)
-    testable = [r for r in rows if r["untestable_reason"] is None]
-    adj = holm({r["hypothesis"]: r["p"] for r in testable})
-    m = len(testable)
-    for r in rows:
-        if r["untestable_reason"] is not None:
-            r["supported"] = None
-            continue
-        r["p_holm"] = adj[r["hypothesis"]]
-        ok = r["p_holm"] < SIG and r["mean_d"] > 0 and r["gate"] is not False
-        if r.get("_has_clean"):
-            r["clean_pass"] = bool(r["clean_p"] * m < SIG and r["clean_mean_d"] > 0
-                                   and r["clean_gate"] is not False)
-            ok = ok and r["clean_pass"]
-        r["supported"] = bool(ok)
-    return _frame(rows, PRIMARY_COLS)
-
-
-# ---------- secondary ----------
-
-def _secondary_specs(frozen: dict, labels: dict) -> list[dict]:
-    a = float(frozen["alpha_max"])
-    cs = [condition_name(c, a) for c in labels["concepts"]]
-    mx = lambda label: condition_name(label, a)  # noqa: E731
-    eq = lambda e: _eqname(e, frozen)  # noqa: E731
-    return [
-        dict(hypothesis="H5", task="h2", x=eq("compassion"), y=eq("joy"), predicted="−",
-             reason=_reason(frozen, ["compassion", "joy"], eq=True)),
-        dict(hypothesis="compassion_resid3", task="h2", x=mx("compassion__resid3"),
-             concepts=cs, predicted="−", gate=-1,
-             reason=_reason(frozen, ["compassion"], residuals=["compassion__resid3"])),
-        dict(hypothesis="anger_vs_sadness", task="h1_rating", x=eq("anger"), y=eq("sadness"),
-             predicted="+", reason=_reason(frozen, ["anger", "sadness"], eq=True)),
-        dict(hypothesis="pain_resid3", task="h2", x=mx("pain__resid3"), concepts=cs,
-             predicted="+", gate=1,
-             reason=_reason(frozen, ["pain"], residuals=["pain__resid3"])),
-        dict(hypothesis="anger_resid2_vs_resid3", task="h1_rating", x=mx("anger__resid2"),
-             y=mx("anger__resid3"), predicted="+",
-             reason=_reason(frozen, ["anger"], residuals=["anger__resid2", "anger__resid3"])),
-        dict(hypothesis="pain_painaxis_vs_pain", task="h2", x=mx("pain_painaxis"),
-             y=mx("pain"), predicted="two-sided", reason=_reason(frozen, ["pain"])),
-    ]
-
-
-def _sign_ok(predicted: str, mean_d: float) -> bool:
-    return {"+": mean_d > 0, "−": mean_d < 0}.get(predicted, True)
+    return _frame(_run_family(scores, _primary_specs(frozen, labels)), PRIMARY_COLS)
 
 
 def secondary_tests(scores: ScoreTable, frozen: dict, labels: dict | None = None) -> pd.DataFrame:
+    _require(frozen, KEYS_SECONDARY, "secondary_tests")
     labels = labels if labels is not None else load_labels()
     a = float(frozen["alpha_max"])
-    rows = []
-    for s in _secondary_specs(frozen, labels):
-        y, cs = s.get("y"), s.get("concepts", ())
-        r = {"hypothesis": s["hypothesis"], "task": s["task"], "predicted": s["predicted"],
-             "contrast": f"{s['x']} − {y if y else _concept_label(a)}",
-             "untestable_reason": s["reason"]}
-        if r["untestable_reason"] is None:
-            res = _contrast(scores, s["task"], s["x"], y, cs, s.get("gate", 0))
-            if res is None:
-                r["untestable_reason"] = R_MISSING
-            else:
-                r.update({k: v for k, v in res.items() if k not in ("x_effect", "y_effect")})
-        rows.append(r)
-    testable = [r for r in rows if r["untestable_reason"] is None]
-    adj = holm({r["hypothesis"]: r["p"] for r in testable})
-    for r in rows:
-        if r["untestable_reason"] is not None:
-            r["supported"] = None
-            continue
-        r["p_holm"] = adj[r["hypothesis"]]
-        r["supported"] = bool(r["p_holm"] < SIG and _sign_ok(r["predicted"], r["mean_d"])
-                              and r["gate"] is not False)
+    rows = [{k: v for k, v in r.items() if k not in XY}
+            for r in _run_family(scores, _secondary_specs(frozen, labels))]
     for e in labels["core"]:            # text vs vector: descriptive only, no p, no Holm
         for task in ("h1_rating", "h2"):
             tx, vx = f"text_{e}", condition_name(e, a)
@@ -352,9 +392,8 @@ def secondary_tests(scores: ScoreTable, frozen: dict, labels: dict | None = None
                 r["untestable_reason"] = R_MISSING
             else:
                 for key, c in (("text", tx), ("vector", vx)):
-                    d = _finite((df[c] - df["baseline"]).to_numpy(dtype=float))
-                    r[f"{key}_effect"] = float(d.mean()) if d.size else NAN
-                    r[f"{key}_ci_low"], r[f"{key}_ci_high"] = bootstrap_ci(d)
+                    r[f"{key}_effect"], r[f"{key}_ci_low"], r[f"{key}_ci_high"] = _mean_ci(
+                        (df[c] - df["baseline"]).to_numpy(dtype=float))
             rows.append(r)
     return _frame(rows, SECONDARY_COLS)
 
@@ -437,9 +476,8 @@ def _cross(scores, a, labels, tasks) -> dict:
                 if cond not in df.columns or "baseline" not in df.columns:
                     continue
                 d = _finite((df[cond] - df["baseline"]).to_numpy(dtype=float))
-                lo, hi = bootstrap_ci(d)
-                out[task][cond] = {"effect": float(d.mean()) if d.size else NAN,
-                                   "ci_low": lo, "ci_high": hi, "n": int(d.size)}
+                mean, lo, hi = _mean_ci(d)
+                out[task][cond] = {"effect": mean, "ci_low": lo, "ci_high": hi, "n": int(d.size)}
     return out
 
 
@@ -458,11 +496,13 @@ def _physical_harm(scores, frozen, labels, h2_items) -> dict:
         return {"note": f"{R_MISSING}，略過身體傷害子集"}
     return {"label": "探索性", "contrast": spec["contrast"] + "（只含致死或致殘的題目）",
             "n_items": len(ids), "alpha_note": spec["alpha_note"],
-            **{k: res[k] for k in ("n", "mean_d", "ci_low", "ci_high", "p")}}
+            **{k: res[k] for k in ("n", "mean_d", "ci_low", "ci_high", "p", "w_plus",
+                                   "w_minus")}}
 
 
 def exploratory(scores: ScoreTable, frozen: dict, vad: pd.DataFrame | None,
                 h2_items: pd.DataFrame | None = None, labels: dict | None = None) -> dict:
+    _require(frozen, KEYS_PRIMARY, "exploratory")
     labels = labels if labels is not None else load_labels()
     a = float(frozen["alpha_max"])
     tasks = [t for t in VARIANTS if t in scores]
@@ -496,19 +536,26 @@ def _txt(v) -> str | None:
     return v if isinstance(v, str) and v else None
 
 
-def _axes(frozen: dict, name: str) -> tuple[str, bool]:
-    removed = frozen.get("residual_removed_axes", {}).get(name, ["V", "A", "D"])
-    return "、".join(AXIS_NAMES[k] for k in "VAD" if k in removed), set(removed) != set("VAD")
+def _axes(frozen: dict, name: str, full: str) -> tuple[str, bool, str]:
+    """(removed axes text, removed fewer than `full`, axes of `full` not removed)."""
+    removed = _get(frozen, "residual_removed_axes", name)
+    txt = lambda keys: "、".join(AXIS_NAMES[k] for k in keys)  # noqa: E731
+    return (txt(k for k in "VAD" if k in removed), not set(full) <= set(removed),
+            txt(k for k in full if k not in removed))
 
 
 def _why_not(r) -> list[str]:
-    why, ph = [], float(r["p_holm"])
+    why, ph, md = [], float(r["p_holm"]), float(r["mean_d"])
     if np.isnan(ph):
         why.append("無法計算 p 值")
     elif ph >= SIG:
         why.append(f"校正後 p = {ph:.3g}，沒有小於 0.05")
-    if not float(r["mean_d"]) > 0:
+    if np.isnan(md):
+        why.append("平均差無法計算（沒有有效題目）")
+    elif not md > 0:
         why.append("平均差不是正的")
+    elif not float(r["w_plus"]) > float(r["w_minus"]):
+        why.append("符號等級和的方向（W+ ≤ W−）和預測相反")
     if _tri(r.get("gate")) is False:
         why.append("效果沒有贏過至少 38 個概念向量")
     if _tri(r.get("clean_pass")) is False:
@@ -516,7 +563,26 @@ def _why_not(r) -> list[str]:
     return why or ["未達支持標準"]
 
 
+def _h3_direction(r) -> str:
+    x, y = float(r["x_effect"]), float(r["y_effect"])
+    xl, xh, yl, yh = (float(r[k]) for k in ("x_ci_low", "x_ci_high", "y_ci_low", "y_ci_high"))
+    if not np.all(np.isfinite([x, y, xl, xh, yl, yh])):
+        return ("憤怒和恐懼各自相對於不調整的效果無法計算（缺少不調整的分數），"
+                "無法判斷兩者方向是否相反。")
+    vals = (f"憤怒相對於不調整 {x:+.3f}（95% CI {xl:+.3f} ~ {xh:+.3f}），"
+            f"恐懼 {y:+.3f}（95% CI {yl:+.3f} ~ {yh:+.3f}）")
+    if (xl > 0 and yh < 0) or (xh < 0 and yl > 0):
+        return (f"在誘發強度相同（α_eq）時，{vals}，兩者的信賴區間都不含 0 且方向相反："
+                "這是「具體情緒有不同作用」最有力的證據。")
+    if (xl > 0 and yl > 0) or (xh < 0 and yh < 0):
+        return (f"在誘發強度相同（α_eq）時，{vals}，兩者效果方向相同，兩者只是大小不同，"
+                "不是作用相反。")
+    return (f"在誘發強度相同（α_eq）時，{vals}；至少有一方的信賴區間包含 0，無法確定方向，"
+            "所以既不能說兩者作用相反，也不能說只差在大小。")
+
+
 def interpret(primary: pd.DataFrame, frozen: dict) -> list[str]:
+    _require(frozen, KEYS_INTERPRET, "interpret")
     p = primary.set_index("hypothesis")
     st = {h: _tri(p.loc[h, "supported"]) if h in p.index else None for h in HYP_NAMES}
     out = []
@@ -534,34 +600,27 @@ def interpret(primary: pd.DataFrame, frozen: dict) -> list[str]:
         else:
             out.append(f"{name}：不支持（{'；'.join(_why_not(r))}）{note}。")
     s1, s3, s4 = st["H1"], st["H3"], st["H4"]
-    axes3, partial3 = _axes(frozen, "anger__resid3")
+    h4_reason = _txt(p.loc["H4", "untestable_reason"]) if "H4" in p.index else None
+    axes3, partial3, kept3 = (_axes(frozen, "anger__resid3", "VAD") if h4_reason != R_AXIS
+                              else ("", False, ""))
+    if partial3:   # spec §6.3: always state which axes the anger residual removed
+        out.append(f"H4 的憤怒殘差在這一層只扣掉了{axes3}；{kept3}不可靠，沒有扣掉，"
+                   "所以和 H4 有關的結論都只能針對扣掉的這幾個軸。")
+    caveat3 = f"（H4 實際只扣掉了{axes3}，所以只能說可以用這幾個軸解釋。）" if partial3 else ""
     if s1 is True and s3 is not True and s4 is False:
-        t = "H1 成立，但 H3、H4 不成立 → 憤怒的效果可以用三個通用軸解釋。"
-        if partial3:
-            t += f"（H4 實際只扣掉了{axes3}這幾個軸，嚴格來說只能說可以用這幾個軸解釋。）"
-        out.append(t)
+        out.append("H1 成立，但 H3、H4 不成立 → 憤怒的效果可以用三個通用軸解釋。" + caveat3)
     if s3 is True and s4 is False:
-        axes2, partial2 = _axes(frozen, "anger__resid2")
-        t = ("H3 成立，H4 不成立 → 憤怒和恐懼的作用不同，但差異可以用三個通用軸（很可能是掌控感）"
-             "解釋。請再看次要檢驗中「只扣兩個軸」（anger_resid2_vs_resid3）的結果，判斷掌控感是否"
-             "就是關鍵。")
-        if partial2:
-            t += f"（「只扣兩個軸」的版本實際只扣掉了{axes2}。）"
-        out.append(t)
+        axes2, partial2, _ = _axes(frozen, "anger__resid2", "VA")
+        out.append(
+            "H3 成立，H4 不成立 → 憤怒和恐懼的作用不同，但差異可以用三個通用軸（很可能是掌控感）"
+            "解釋。" + caveat3 + "請再看次要檢驗中「只扣兩個軸」（anger_resid2_vs_resid3）的"
+            "結果，判斷掌控感是否就是關鍵。"
+            + (f"（「只扣兩個軸」的版本實際只扣掉了{axes2}。）" if partial2 else ""))
     if s4 is True:
         out.append(f"H4 成立 → 憤怒有超出{axes3}這幾個軸的作用。H4 只扣掉了這幾個可靠的軸，"
                    "結論只能寫到這裡。" if partial3 else
                    "H4 成立 → 憤怒有超出三個通用軸的作用。這是最強的結論。")
     if s3 is True:
-        x, y = float(p.loc["H3", "x_effect"]), float(p.loc["H3", "y_effect"])
-        if not (np.isfinite(x) and np.isfinite(y)):
-            out.append("憤怒和恐懼各自相對於不調整的效果無法計算（缺少不調整的分數），"
-                       "無法判斷兩者方向是否相反。")
-        elif x * y < 0:
-            out.append(f"在誘發強度相同（α_eq）時，憤怒（相對於不調整 {x:+.3f}）和恐懼（{y:+.3f}）"
-                       "對懲罰評分的效果方向相反：這是「具體情緒有不同作用」最有力的證據。")
-        else:
-            out.append(f"在誘發強度相同（α_eq）時，憤怒（相對於不調整 {x:+.3f}）和恐懼（{y:+.3f}）"
-                       "對懲罰評分的效果方向相同，兩者只是大小不同，不是作用相反。")
+        out.append(_h3_direction(p.loc["H3"]))
     out.append("以上結果只描述調整模型內部方向後答案的變化，不代表模型有情緒或主觀感受。")
     return out

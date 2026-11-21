@@ -2,8 +2,9 @@
 exploratory.json、interpretation.md（results/6.8_analysis/<模型名>/）。
 
 - 凍結檔 results/6.5_calibration/<模型名>/frozen_config.json 不存在就拒絕執行。
-- scripts/emolab/stats.py 或 conditions.py 的 sha256 和凍結檔記錄的不同，也拒絕執行；
-  加上 --allow-changed-analysis 才會繼續，但所有結果都標示為探索性。
+- scripts/emolab/stats.py、conditions.py，或 datasets/6.2_concepts.json、
+  6.6_punishment_vignettes.json、6.6_moralchoice_harm.json 的 sha256 和凍結檔記錄的不同，
+  也拒絕執行；加上 --allow-changed-analysis 才會繼續，但所有結果都標示為探索性。
 """
 import argparse
 import json
@@ -22,6 +23,16 @@ DEFAULT_MODEL = "Qwen_3_8B_instruct"
 BANNER = "⚠ 凍結後改過分析程式：以下所有結果僅屬探索性"
 VAD_CSV = DATASETS / "6.3_nrc_vad_emotions.csv"          # git-ignored; may be absent
 H2_ITEMS = DATASETS / "6.6_moralchoice_harm.json"
+
+
+def hashed_files() -> dict[str, Path]:
+    """Frozen sha256 key → file: the analysis rules, the condition registry, and the item /
+    concept datasets the results depend on (R24)."""
+    return {"stats_sha256": Path(stats.__file__),
+            "conditions_sha256": Path(conditions.__file__),
+            "concepts_sha256": DATASETS / "6.2_concepts.json",
+            "vignettes_sha256": DATASETS / "6.6_punishment_vignettes.json",
+            "moralchoice_sha256": H2_ITEMS}
 
 
 def _jsonable(o):
@@ -68,10 +79,7 @@ def main(argv: list[str] | None = None) -> None:
     if not frozen_path.exists():
         raise SystemExit(f"找不到凍結檔 {frozen_path}：校準設定還沒凍結，分析拒絕執行。")
     frozen = json.loads(frozen_path.read_text(encoding="utf-8"))
-    changed = integrity.check_frozen_hashes(
-        frozen, {"stats_sha256": Path(stats.__file__),
-                 "conditions_sha256": Path(conditions.__file__)},
-        args.allow_changed_analysis)
+    changed = integrity.check_frozen_hashes(frozen, hashed_files(), args.allow_changed_analysis)
 
     scores_dir = args.scores_dir or RESULTS / "6.7_runs" / args.model_dir / "scores"
     if not scores_dir.is_dir() or not any(scores_dir.glob("*.csv")):

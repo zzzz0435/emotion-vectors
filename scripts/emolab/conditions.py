@@ -113,6 +113,8 @@ def build_conditions(frozen: dict, labels: dict) -> list[Condition]:
              (-a, a))
     for e, ai in alpha_ind.items():
         add(e, "emotion", f"vectors:unit:{e}", ai)
+        if e in core and e in contaminated:   # clean check of a fallback H1/H2 (R20)
+            add(f"{e}__clean", "clean", f"clean:{e}__clean", ai)
         for c in labels["concepts"]:
             add(c, "concept", f"vectors:unit:{c}", ai)
         for i in range(20):
