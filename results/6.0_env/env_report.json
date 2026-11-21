@@ -9,7 +9,7 @@
     "qwen3-1.7b": {
       "loaded": true,
       "peak_vram_mb": 4172.0,
-      "tokens_per_s": 3.58,
+      "tokens_per_s": 28.86,
       "error": null
     }
   }
