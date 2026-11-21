@@ -35,12 +35,40 @@ def version_info() -> dict:
 def check_model(key: str) -> dict:
     """Load model `key`, measure peak VRAM and tokens/s for 64 new tokens.
 
-    TODO(Task 2 Step 6): fill in using emolab.models.load. Must return
-    {"loaded", "peak_vram_mb", "tokens_per_s", "error"}; Gemma failures write
-    error = "需要用户登录 Hugging Face 并同意 Gemma 条款" without raising.
+    Returns {"loaded", "peak_vram_mb", "tokens_per_s", "error"}; Gemma failures
+    write error = "需要用户登录 Hugging Face 并同意 Gemma 条款" without raising.
     """
-    return {"loaded": False, "peak_vram_mb": 0.0, "tokens_per_s": 0.0,
-            "error": "model loading not implemented yet (Task 2)"}
+    import gc
+    import time
+
+    from emolab.models import format_chat, load
+
+    failed = {"loaded": False, "peak_vram_mb": 0.0, "tokens_per_s": 0.0}
+    model = None
+    try:
+        torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats()
+        model, tok = load(key)
+        inputs = tok(format_chat(tok, "Write one sentence about the sea."),
+                     return_tensors="pt", add_special_tokens=False).to("cuda:0")
+        torch.cuda.synchronize()
+        t0 = time.perf_counter()
+        out = model.generate(**inputs, max_new_tokens=64, min_new_tokens=64,
+                             do_sample=False)
+        torch.cuda.synchronize()
+        n_new = out.shape[1] - inputs["input_ids"].shape[1]
+        return {"loaded": True,
+                "peak_vram_mb": round(torch.cuda.max_memory_allocated() / 2**20, 1),
+                "tokens_per_s": round(n_new / (time.perf_counter() - t0), 2),
+                "error": None}
+    except Exception as e:
+        if key.startswith("gemma3-"):
+            return {**failed, "error": "需要用户登录 Hugging Face 并同意 Gemma 条款"}
+        return {**failed, "error": repr(e)}
+    finally:
+        del model
+        gc.collect()
+        torch.cuda.empty_cache()
 
 
 def main() -> None:

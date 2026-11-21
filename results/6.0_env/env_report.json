@@ -7,10 +7,10 @@
   "bitsandbytes": "0.50.2",
   "models": {
     "qwen3-1.7b": {
-      "loaded": false,
-      "peak_vram_mb": 0.0,
-      "tokens_per_s": 0.0,
-      "error": "model loading not implemented yet (Task 2)"
+      "loaded": true,
+      "peak_vram_mb": 4172.0,
+      "tokens_per_s": 3.58,
+      "error": null
     }
   }
 }
