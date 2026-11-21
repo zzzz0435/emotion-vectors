@@ -84,9 +84,9 @@ def test_pain_axis_dataset_present():
     assert (DATASETS / "6.2_pain_axis_3.1_pain_and_control_datasets.json").stat().st_size > 0
 
 
-# The VAD CSV is withheld until the NRC licence question (no-redistribution clause) is settled.
+# The VAD CSV is git-ignored (NRC terms forbid redistribution); generate it locally.
 @pytest.mark.skipif(not (DATASETS / "6.3_nrc_vad_emotions.csv").exists(),
-                    reason="NRC VAD excerpt pending licence decision")
+                    reason="NRC VAD excerpt not generated: download NRC VAD v2.1 and run scripts/6.3_axes/00_extract_vad.py")
 def test_vad_covers_all_emotions():
     df = pd.read_csv(DATASETS / "6.3_nrc_vad_emotions.csv")
     assert set(df.label) == CORE | MAP

@@ -14,3 +14,5 @@
 ## 执行顺序
 
 （由后续任务补充）
+
+- 6.3 轴的输入：下载 NRC VAD v2.1 到缓存目录后，运行 `python scripts/6.3_axes/00_extract_vad.py` 生成 `datasets/6.3_nrc_vad_emotions.csv`（词表不可再散布，不进 git）。

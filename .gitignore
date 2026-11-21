@@ -151,6 +151,9 @@ activemq-data/
 # SageMath parsed files
 *.sage.py
 
+# NRC VAD excerpt: lexicon terms forbid redistribution; regenerate locally
+datasets/6.3_nrc_vad_emotions.csv
+
 # Environments
 .env
 .envrc
