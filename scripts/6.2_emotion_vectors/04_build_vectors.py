@@ -12,12 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from emolab import models  # noqa: E402
 from emolab.paths import DATASETS, cache_dir, results_dir  # noqa: E402
-from emolab.vectors import diff_of_means  # noqa: E402
-
-
-def as_bool(s: pd.Series) -> pd.Series:
-    """index.csv may round-trip `heldout` as bool or as 'True'/'False' strings."""
-    return s.astype(str).str.strip().str.lower().eq("true")
+from emolab.vectors import as_bool, diff_of_means  # noqa: E402
 
 
 def expected_labels() -> tuple[list[str], list[str], str]:

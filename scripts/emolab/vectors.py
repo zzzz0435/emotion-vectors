@@ -1,6 +1,15 @@
 """Direction vectors from mean activations (difference of means, Pain-axis denoised vector)."""
 import numpy as np
+import pandas as pd
 from sklearn.decomposition import PCA
+from sklearn.metrics import roc_auc_score
+
+SEPARABLE_THRESHOLD = 0.75  # anger vs fear held-out AUROC needed to call them separable
+
+
+def as_bool(s: pd.Series) -> pd.Series:
+    """index.csv may round-trip `heldout` as bool or as 'True'/'False' strings."""
+    return s.astype(str).str.strip().str.lower().eq("true")
 
 
 def diff_of_means(acts: np.ndarray, labels: np.ndarray, target: str, baseline: str,
@@ -48,3 +57,21 @@ def pain_axis_vector(pain_acts: np.ndarray, control_acts: np.ndarray,
         for d in pca.components_[:n_comp]:
             vec = vec - np.dot(vec, d) * d
     return vec
+
+
+def projection_auroc(acts: np.ndarray, labels: np.ndarray, unit_vec: np.ndarray,
+                     pos: str, neg: str, mask: np.ndarray) -> float:
+    """AUROC of the projection onto `unit_vec` for `pos` (positive class) vs `neg`, over masked rows."""
+    labels = np.asarray(labels)
+    mask = np.asarray(mask, dtype=bool)
+    sel = mask & ((labels == pos) | (labels == neg))
+    if not ((labels[sel] == pos).any() and (labels[sel] == neg).any()):
+        raise ValueError(f"need masked rows for both {pos!r} and {neg!r}")
+    return float(roc_auc_score(labels[sel] == pos, acts[sel] @ unit_vec))
+
+
+def separability(acts: np.ndarray, labels: np.ndarray, train_mask: np.ndarray,
+                 test_mask: np.ndarray, a: str = "anger", b: str = "fear") -> float:
+    """Direction unit(mean_a - mean_b) from training rows; AUROC of a vs b on test rows."""
+    d = diff_of_means(acts, labels, a, b, train_mask).astype(np.float64)
+    return projection_auroc(acts, labels, d / np.linalg.norm(d), a, b, test_mask)
