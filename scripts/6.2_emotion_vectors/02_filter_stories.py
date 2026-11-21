@@ -67,12 +67,12 @@ def main() -> None:
     rng = random.Random(42)
     core = [e["label"] for e in emotions if e["group"] == "core"]
     contam = [c["label"] for c in concepts if c["role"] == "contamination"]
-    lines = ["# 故事抽查样本", "", "固定随机种子 42；核心情绪每种 5 篇，污染概念每个 2 篇。", ""]
+    lines = ["# 故事抽查樣本", "", "固定隨機種子 42；核心情緒每種 5 篇，汙染概念每個 2 篇。", ""]
     for label, n in [(l, 5) for l in core] + [(l, 2) for l in contam]:
         pool = [r for r in kept if r["label"] == label]
         lines += [f"## {label}", ""]
         for r in rng.sample(pool, min(n, len(pool))):
-            lines += [f"### {r['id']}（主题：{r['topic']}）", "", r["text"], ""]
+            lines += [f"### {r['id']}（主題：{r['topic']}）", "", r["text"], ""]
     _write_lf(rdir / "review_samples.md", "\n".join(lines))
 
     if args.model == FINAL_MODEL:

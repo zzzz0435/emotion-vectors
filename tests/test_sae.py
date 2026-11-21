@@ -45,4 +45,4 @@ def test_sae_report_notes_negative_cosines_not_listed():
     spec = importlib.util.spec_from_file_location("sae01", p)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    assert "余弦为负" in mod.render([{"name": "anger", "skipped": "x"}], 18)
+    assert "餘弦為負" in mod.render([{"name": "anger", "skipped": "x"}], 18)

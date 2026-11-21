@@ -25,14 +25,14 @@ PROMPTS = ["Describe your morning routine.",
            "Tell me about your favorite meal."]
 ALPHAS = [0.0, 0.1, 0.2, 0.4]
 MAX_NEW_TOKENS = 120
-NOTE = ("> 注意：这里的 α（调整强度）只是暂定值，用来先看一眼效果；正式数值会在计划二校准。"
-        "α = 0 表示不调整（对照），同一个提示的 α = 0 文字只生成一次，所有情绪共用。"
-        "解码用贪婪解码（每次结果相同），疼痛只生成了这 12 段。")
+NOTE = ("> 注意：這裡的 α（調整強度）只是暫定值，用來先看一眼效果；正式數值會在計劃二校準。"
+        "α = 0 表示不調整（對照），同一個提示的 α = 0 文字只生成一次，所有情緒共用。"
+        "解碼用貪婪解碼（每次結果相同），疼痛只生成了這 12 段。")
 
 
 def render_examples(core: list[str], gens: dict) -> str:
     """gens[(emotion_or_None, prompt_idx, alpha)] -> text; alpha 0.0 is keyed with None."""
-    lines = ["# 检查点 1：调整后的范例文字", "", NOTE, ""]
+    lines = ["# 檢查點 1：調整後的範例文字", "", NOTE, ""]
     for emo in core:
         lines += [f"## {emo}", ""]
         for pi, prompt in enumerate(PROMPTS):
@@ -50,7 +50,7 @@ def parse_sae_tops(md: str, labels=("anger", "fear")) -> dict:
         name = sec.split("\n", 1)[0].strip()
         if name in labels:
             out[name] = [(int(i), float(c)) for i, c in
-                         re.findall(r"^### \d+\. 特征 (\d+)（余弦 (-?[\d.]+)）", sec, flags=re.M)]
+                         re.findall(r"^### \d+\. 特徵 (\d+)（餘弦 (-?[\d.]+)）", sec, flags=re.M)]
     return out
 
 

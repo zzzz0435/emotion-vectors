@@ -32,7 +32,7 @@ def version_info() -> dict:
     }
 
 
-GEMMA_LOGIN_ERROR = "需要用户登录 Hugging Face 并同意 Gemma 条款"
+GEMMA_LOGIN_ERROR = "需要使用者登錄 Hugging Face 並同意 Gemma 條款"
 
 
 def is_auth_error(e: Exception) -> bool:

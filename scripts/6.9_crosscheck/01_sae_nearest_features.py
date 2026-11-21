@@ -31,19 +31,19 @@ def snippet(text: str, n: int = SNIPPET) -> str:
 def render(sections: list[dict], layer: int) -> str:
     """sections: {"name", "features": [(idx, cos, [(story_id, label, snippet), ...])]} or
     {"name", "skipped": reason}."""
-    lines = [f"# SAE 最近特征（第 {layer} 层）", "",
-             "> 注意：此字典训练于基础版（Qwen3-8B-Base），而我们的向量来自指令版，"
-             "只能当作粗略参考。", "",
-             f"字典：`{SAE_REPO}`，`layer{layer}.sae.pt`。每个向量列出余弦最高的 {TOP_K} 个特征；"
-             f"每个特征再列出我们的故事里在该特征方向上投影最大的 {TOP_STORIES} 篇的前 {SNIPPET} 个字。",
-             "按余弦从高到低列出；余弦为负的特征（方向相反）不在列表中。", ""]
+    lines = [f"# SAE 最近特徵（第 {layer} 層）", "",
+             "> 注意：此字典訓練於基礎版（Qwen3-8B-Base），而我們的向量來自指令版，"
+             "只能當作粗略參考。", "",
+             f"字典：`{SAE_REPO}`，`layer{layer}.sae.pt`。每個向量列出餘弦最高的 {TOP_K} 個特徵；"
+             f"每個特徵再列出我們的故事裡在該特徵方向上投影最大的 {TOP_STORIES} 篇的前 {SNIPPET} 個字。",
+             "按餘弦從高到低列出；餘弦為負的特徵（方向相反）不在列表中。", ""]
     for sec in sections:
         lines += [f"## {sec['name']}", ""]
         if "skipped" in sec:
-            lines += [f"（略过：{sec['skipped']}）", ""]
+            lines += [f"（略過：{sec['skipped']}）", ""]
             continue
         for rank, (idx, cos, stories) in enumerate(sec["features"], 1):
-            lines += [f"### {rank}. 特征 {idx}（余弦 {cos:.3f}）", ""]
+            lines += [f"### {rank}. 特徵 {idx}（餘弦 {cos:.3f}）", ""]
             lines += [f"- `{sid}`（{lab}）：{snip}" for sid, lab, snip in stories]
             lines.append("")
     return "\n".join(lines)

@@ -49,23 +49,23 @@ def render(sep, df=None, ax=None, contam=CONTAM):
 def test_render_checkpoint1_contains_key_sections():
     s = render_checkpoint1(valid_df(), {"18": {"auroc": 0.8123, "separable": True}},
                            CONTAM, axes(), SAE, "x.md")
-    for h in ["愤怒 vs 恐惧", "污染检查", "三个轴", "特征字典", "范例文字"]:
+    for h in ["憤怒 vs 恐懼", "汙染檢查", "三個軸", "特徵字典", "範例文字"]:
         assert h in s
-    assert "0.81" in s and "可以分开" in s
+    assert "0.81" in s and "可以分開" in s
 
 
 def test_not_separable_says_h3_untestable():
     s = render({"9": {"auroc": 0.6, "separable": False}, "18": {"auroc": 0.55, "separable": False}})
-    assert "没有分开" in s and "H3" in s and "无法检验" in s and "可以分开" not in s
+    assert "沒有分開" in s and "H3" in s and "無法檢驗" in s and "可以分開" not in s
 
 
 def test_v_axis_unreliable_says_h4_untestable():
     s = render(OK_SEP, ax=axes(v_ok=False))
-    assert "H4 无法检验" in s and "不可靠" in s
+    assert "H4 無法檢驗" in s and "不可靠" in s
 
 
 def test_v_axis_reliable_no_h4_untestable():
-    assert "H4 无法检验" not in render(OK_SEP)
+    assert "H4 無法檢驗" not in render(OK_SEP)
 
 
 def test_low_auroc_core_flagged():
@@ -79,13 +79,13 @@ def test_contamination_flags_listed_per_emotion_and_probe():
     section = s.split("## 三")[1].split("## 四")[0]
     assert "| anger | punishment | 18 |" in section
     assert "| fear |" not in section and "harming_others" not in section
-    assert "没有任何情绪被标记" in render(OK_SEP, contam={"18": {"punishment": {"anger": {"flagged": False}}}})
+    assert "沒有任何情緒被標記" in render(OK_SEP, contam={"18": {"punishment": {"anger": {"flagged": False}}}})
 
 
 def test_pain_section_and_number_format():
     s = render(OK_SEP)
-    assert "疼痛比较突出" in s and "模型不同" in s
-    assert "| 我们的 pain | 0.50 |" in s and "| sadness（对照） | 0.30 |" in s
+    assert "疼痛比較突出" in s and "模型不同" in s
+    assert "| 我們的 pain | 0.50 |" in s and "| sadness（對照） | 0.30 |" in s
 
 
 def test_table_order_core_first():
@@ -111,12 +111,12 @@ def test_examples_72_passages_baseline_shared():
         gens[(None, pi, 0.0)] = f"base-{pi}"
     md = m.render_examples(CORE, gens)
     assert md.count("**α = ") == 72
-    assert md.count("base-0") == 6 and "暂定" in md
+    assert md.count("base-0") == 6 and "暫定" in md
     assert md.index("## anger") < md.index("## pain")
 
 
 def test_parse_sae_tops():
-    md = "## anger\n\n### 1. 特征 12（余弦 0.310）\n\n- x\n### 2. 特征 5（余弦 0.200）\n## fear\n\n### 1. 特征 7（余弦 -0.100）\n## joy\n### 1. 特征 9（余弦 0.5）\n"
+    md = "## anger\n\n### 1. 特徵 12（餘弦 0.310）\n\n- x\n### 2. 特徵 5（餘弦 0.200）\n## fear\n\n### 1. 特徵 7（餘弦 -0.100）\n## joy\n### 1. 特徵 9（餘弦 0.5）\n"
     assert _load_08().parse_sae_tops(md) == {"anger": [(12, 0.31), (5, 0.2)], "fear": [(7, -0.1)]}
 
 
@@ -125,31 +125,31 @@ def test_h4_uses_for_anger_not_all():
     a = axes(v_ok=True)
     a["fits"]["for_anger"] = axes(v_ok=False)["fits"]["for_anger"]
     a["residuals"] = {"anger__resid3": {"9": "untestable", "18": "untestable"}}
-    assert "H4 无法检验" in render(OK_SEP, ax=a)
+    assert "H4 無法檢驗" in render(OK_SEP, ax=a)
 
 
 def test_h4_names_usable_layers_even_if_all_unreliable():
     a = axes(v_ok=False)
     a["residuals"] = {"anger__resid3": {"9": "untestable", "18": "ok"}}
     s = render(OK_SEP, ax=a)
-    assert "H4 可以在第 18 层检验" in s and "H4 无法检验" not in s
+    assert "H4 可以在第 18 層檢驗" in s and "H4 無法檢驗" not in s
 
 
 def test_h4_falls_back_to_for_anger_fit_without_residuals():
     a = axes(v_ok=True)
     del a["residuals"]
-    assert "H4 可以在第 9、18 层检验" in render(OK_SEP, ax=a)
+    assert "H4 可以在第 9、18 層檢驗" in render(OK_SEP, ax=a)
 
 
 def test_missing_all_fit_set_no_crash():
     s = render(OK_SEP, ax={"fits": {}, "residuals": {}})
-    assert "没有通用轴的拟合结果" in s and "H4 无法检验" in s
+    assert "沒有通用軸的擬合結果" in s and "H4 無法檢驗" in s
 
 
 def test_pain_judged_by_story_vector_only():
     pc = {**PAIN, "vectors": {"s2": {**PAIN["vectors"]["s2"], "cos_pain": 0.1, "cos_pain_painaxis": 0.9}}}
     s = render_checkpoint1(valid_df(), OK_SEP, CONTAM, axes(), SAE, "x.md", pain_compare=pc)
-    assert "没有特别突出" in s and "pain_painaxis 的余弦是 0.90" in s
+    assert "沒有特別突出" in s and "pain_painaxis 的餘弦是 0.90" in s
 
 
 def test_optional_inputs_absent_says_not_provided():
@@ -165,26 +165,26 @@ def test_08_required_inputs_error_names_file_and_script(tmp_path):
 
 
 def test_best_layer_optimism_note():
-    assert "略微偏乐观" in render(OK_SEP)
+    assert "略微偏樂觀" in render(OK_SEP)
 
 
 def test_sae_skipped_label_distinct_from_missing_file():
     s = render_checkpoint1(valid_df(), OK_SEP, CONTAM, axes(), {"anger": [(1, 0.3)], "fear": []},
                            "x.md")
-    assert "该向量没有结果（已跳过）" in s
+    assert "該向量沒有結果（已跳過）" in s
     s2 = render_checkpoint1(valid_df(), OK_SEP, CONTAM, axes(), {}, "x.md")
-    assert "未提供（没有 sae_L18.md）" in s2 and "已跳过" not in s2
+    assert "未提供（沒有 sae_L18.md）" in s2 and "已跳過" not in s2
 
 
 def test_h4_names_removed_axes_per_layer_and_falls_back():
     a = axes(v_ok=True)
     a["residual_axes"] = {"anger__resid3": {"9": ["V", "D"], "18": ["V", "A", "D"]}}
     s = render(OK_SEP, ax=a)
-    assert "第 9 层去掉 V、D" in s and "第 18 层去掉 V、A、D" in s
+    assert "第 9 層去掉 V、D" in s and "第 18 層去掉 V、A、D" in s
     del a["residual_axes"]
-    assert "H4 可以在第 9、18 层检验" in render(OK_SEP, ax=a)
+    assert "H4 可以在第 9、18 層檢驗" in render(OK_SEP, ax=a)
 
 
 def test_parse_sae_tops_skipped_label_is_empty_list():
-    md = "## anger\n\n### 1. 特征 12（余弦 0.310）\n"
+    md = "## anger\n\n### 1. 特徵 12（餘弦 0.310）\n"
     assert _load_08().parse_sae_tops(md) == {"anger": [(12, 0.31)], "fear": []}
