@@ -45,7 +45,7 @@ def render_examples(core: list[str], gens: dict) -> str:
 
 def parse_sae_tops(md: str, labels=("anger", "fear")) -> dict:
     """Read (feature, cosine) pairs per label out of sae_L{layer}.md."""
-    out: dict = {}
+    out: dict = {lab: [] for lab in labels}  # present but empty = file exists, section skipped
     for sec in re.split(r"^## ", md, flags=re.M)[1:]:
         name = sec.split("\n", 1)[0].strip()
         if name in labels:

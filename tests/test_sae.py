@@ -36,3 +36,13 @@ def test_top_stories_per_feature():
     out = top_stories_per_feature(acts, W, [1, 2], n=5)
     assert out[1] == [3, 7, 11, 15, 19]
     assert len(out[2]) == 5
+
+
+def test_sae_report_notes_negative_cosines_not_listed():
+    import importlib.util
+    from pathlib import Path
+    p = Path(__file__).resolve().parents[1] / "scripts/6.9_crosscheck/01_sae_nearest_features.py"
+    spec = importlib.util.spec_from_file_location("sae01", p)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    assert "余弦为负" in mod.render([{"name": "anger", "skipped": "x"}], 18)

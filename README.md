@@ -14,7 +14,7 @@
 ## 执行顺序（阶段 0–2）
 
 所有命令都在项目根目录执行，先启用虚拟环境（放在 OneDrive 之外：`C:\Users\xgame\.venvs\emotional`）。
-先用 `qwen3-8b`（正式）；`qwen3-1.7b` 可用来先试跑。需要显卡的步骤是 01、03、05、6.9/01、6.9/02、08。
+先用 `qwen3-8b`（正式）；`qwen3-1.7b` 可用来先试跑。需要显卡的步骤是 01、03、05、6.9/02、08。
 
 ```
 # 0. 检查环境
@@ -26,7 +26,9 @@ python scripts/6.3_axes/00_extract_vad.py
 # 2. 生成故事，然后过滤
 python scripts/6.2_emotion_vectors/01_generate_stories.py --model qwen3-8b
 python scripts/6.2_emotion_vectors/02_filter_stories.py --model qwen3-8b
-#    补足循环：若 shortfall.json 还有缺口，就补生成再过滤，直到没有缺口（或缺口不再减少）
+#    补足循环：若 shortfall.json 还有缺口，就补生成再过滤，重复到核心情绪的缺口为 0 为止。
+#    每一轮补生成都用新的随机种子（42 + 1000 × 起始 replicate），并按 filter_report.csv 里该情绪
+#    的通过率多生成（缺口 ÷ 通过率，通过率下限 0.1，上限 5 倍缺口），所以通常 2–4 轮就够。
 python scripts/6.2_emotion_vectors/01_generate_stories.py --model qwen3-8b --top-up
 python scripts/6.2_emotion_vectors/02_filter_stories.py --model qwen3-8b
 
@@ -36,6 +38,7 @@ python scripts/6.2_emotion_vectors/04_build_vectors.py --model qwen3-8b
 
 # 4. Pain-axis 疼痛向量、验证、污染检查
 python scripts/6.2_emotion_vectors/05_pain_axis_vector.py --model qwen3-8b
+#    注意：05 会就地修改 vectors.pt；之后若重跑 04，pain_painaxis 会丢失，需要再跑一次 05。
 python scripts/6.2_emotion_vectors/06_validate_vectors.py --model qwen3-8b
 python scripts/6.2_emotion_vectors/07_contamination.py --model qwen3-8b
 
@@ -44,6 +47,7 @@ python scripts/6.3_axes/01_fit_axes.py --model qwen3-8b
 python scripts/6.3_axes/02_residual_vectors.py --model qwen3-8b
 
 # 6. 交叉确认：SAE 最近特征、与 Pain-axis 论文向量比较
+#    6.9/01 会下载约 2 GB 的 SAE 权重，需要约 2–3 GB 内存，但不需要显卡。
 python scripts/6.9_crosscheck/01_sae_nearest_features.py --model qwen3-8b
 python scripts/6.9_crosscheck/02_compare_pain_axis.py --model qwen3-8b
 

@@ -35,7 +35,8 @@ def render(sections: list[dict], layer: int) -> str:
              "> 注意：此字典训练于基础版（Qwen3-8B-Base），而我们的向量来自指令版，"
              "只能当作粗略参考。", "",
              f"字典：`{SAE_REPO}`，`layer{layer}.sae.pt`。每个向量列出余弦最高的 {TOP_K} 个特征；"
-             f"每个特征再列出我们的故事里在该特征方向上投影最大的 {TOP_STORIES} 篇的前 {SNIPPET} 个字。", ""]
+             f"每个特征再列出我们的故事里在该特征方向上投影最大的 {TOP_STORIES} 篇的前 {SNIPPET} 个字。",
+             "按余弦从高到低列出；余弦为负的特征（方向相反）不在列表中。", ""]
     for sec in sections:
         lines += [f"## {sec['name']}", ""]
         if "skipped" in sec:

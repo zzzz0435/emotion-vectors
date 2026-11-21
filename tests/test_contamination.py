@@ -110,3 +110,14 @@ def test_tie_with_reference_is_not_flagged():
     res = contamination_flags(unit, ["twin"], concepts, "punishment")["twin"]
     assert res["cos"] == res["ref_cos"] and res["cos"] > res["p95_concepts"]
     assert not res["flagged"]
+
+
+def test_nothing_flagged_deletes_stale_vectors_clean(tmp_path):
+    m = _load()
+    stale = tmp_path / "vectors_clean.pt"
+    stale.write_bytes(b"old")
+    m.write_clean(tmp_path, [18], {}, {})
+    assert not stale.exists()
+    m.write_clean(tmp_path, [18], {}, {})  # no file: still fine
+    m.write_clean(tmp_path, [18], {"anger": np.ones((1, 4), dtype=np.float32)}, {})
+    assert stale.exists()

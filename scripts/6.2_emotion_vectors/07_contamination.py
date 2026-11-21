@@ -45,6 +45,21 @@ def run_check(unit: dict[str, np.ndarray], layers: list[int], checked: list[str]
     return flags, clean, {"cleaned_layers": cleaned_layers, "removed_probes": removed}
 
 
+def write_clean(rdir: Path, layers: list, clean: dict, meta: dict) -> None:
+    """Write vectors_clean.pt, or (nothing flagged) delete a stale one from an earlier run."""
+    path = rdir / "vectors_clean.pt"
+    if clean:
+        meta["layers"] = layers
+        torch.save({"layers": layers, "unit": {k: torch.from_numpy(v) for k, v in clean.items()},
+                    "meta": meta}, path)
+        print(f"wrote vectors_clean.pt ({len(clean)} vectors)")
+    else:
+        if path.exists():
+            path.unlink()
+            print("removed stale vectors_clean.pt")
+        print("nothing flagged; no vectors_clean.pt")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", required=True, choices=sorted(models.MODELS))
@@ -66,13 +81,7 @@ def main() -> None:
         for probe, by_lab in by_probe.items():
             hit = [lab for lab, r in by_lab.items() if r["flagged"]]
             print(f"layer {L} {probe}: flagged {hit or 'none'}")
-    if clean:
-        meta["layers"] = layers
-        torch.save({"layers": layers, "unit": {k: torch.from_numpy(v) for k, v in clean.items()},
-                    "meta": meta}, rdir / "vectors_clean.pt")
-        print(f"wrote vectors_clean.pt ({len(clean)} vectors)")
-    else:
-        print("nothing flagged; no vectors_clean.pt")
+    write_clean(rdir, layers, clean, meta)
 
 
 if __name__ == "__main__":

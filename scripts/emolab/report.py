@@ -34,7 +34,8 @@ def _auroc_section(validation: pd.DataFrame, core: list[str]) -> list[str]:
              "用的是没参与训练的故事：1.00 是完全分开，0.50 等于乱猜。", "",
              "核心情绪（含 Pain-axis 疼痛向量）：", "", *head,
              *_auroc_rows(best, first), "", "其余情绪（地图用）：", "", *head,
-             *_auroc_rows(best, rest), ""]
+             *_auroc_rows(best, rest), "",
+             "注意：「最佳层」是在这批同样的留出故事上挑出来的，所以这里的 AUROC 会略微偏乐观。", ""]
     weak = [c for c in core if c in best.index and best.loc[c, "auroc_vs_neutral"] < LOW_AUROC]
     if weak:
         lines.append(f"**警告：** 下列核心情绪在每一层的 AUROC 都低于 {LOW_AUROC}，"
@@ -142,6 +143,10 @@ def _axes_section(axes_info: dict) -> list[str]:
         lines.append("H4 判定：没有不含愤怒、恐惧的轴拟合结果，**H4 无法检验**。")
     elif usable:
         lines.append(f"H4 判定：H4 可以在第 {'、'.join(usable)} 层检验（这些层能得到去掉轴后的愤怒残差向量）。")
+        removed = axes_info.get("residual_axes", {}).get("anger__resid3", {})
+        parts = [f"第 {L} 层去掉 {'、'.join(removed[L]) or '（无）'}" for L in usable if L in removed]
+        if parts:
+            lines.append("各层实际去掉的轴（只去掉可靠的轴）：" + "；".join(parts) + "。")
     else:
         lines.append("H4 判定：不含愤怒、恐惧的效价轴在每一层都不可靠，去掉轴后的愤怒向量做不出来，"
                      "研究报告里会写成「H4 无法检验」。")
@@ -157,8 +162,13 @@ def _sae_section(sae_tops: dict) -> list[str]:
              "详见 6.9 的 sae_L18.md。", ""]
     for lab in ("anger", "fear"):
         feats = sae_tops.get(lab)
-        lines.append(f"- {lab}：" + ("；".join(f"特征 {i}（{_f(c)}）" for i, c in feats)
-                                    if feats else "未提供（没有 sae_L18.md）。"))
+        if feats:
+            text = "；".join(f"特征 {i}（{_f(c)}）" for i, c in feats)
+        elif lab in sae_tops:  # sae_L18.md exists but this label's section has no results
+            text = "该向量没有结果（已跳过）。"
+        else:
+            text = "未提供（没有 sae_L18.md）。"
+        lines.append(f"- {lab}：{text}")
     lines.append("")
     return lines
 
@@ -192,6 +202,8 @@ def _pain_section(pc: dict | None) -> list[str]:
         cav.append(f"取值方式不同（{pc['extraction_mismatch']}）")
     if pc.get("model_mismatch"):
         cav.append(f"模型不同（{pc['model_mismatch']}）")
+    if pc.get("category_mismatch"):
+        cav.append(f"句子类别不同（{pc['category_mismatch']}）")
     if cav:
         lines.append("注意的差异：" + "；".join(cav) + "，所以这个数字只能当粗略参考。")
     lines.append("")

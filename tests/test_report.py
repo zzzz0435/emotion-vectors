@@ -162,3 +162,29 @@ def test_08_required_inputs_error_names_file_and_script(tmp_path):
     m = _load_08()
     with pytest.raises(FileNotFoundError, match="axes.json.*01_fit_axes.py"):
         m.require_inputs({"axes": tmp_path / "axes.json"})
+
+
+def test_best_layer_optimism_note():
+    assert "略微偏乐观" in render(OK_SEP)
+
+
+def test_sae_skipped_label_distinct_from_missing_file():
+    s = render_checkpoint1(valid_df(), OK_SEP, CONTAM, axes(), {"anger": [(1, 0.3)], "fear": []},
+                           "x.md")
+    assert "该向量没有结果（已跳过）" in s
+    s2 = render_checkpoint1(valid_df(), OK_SEP, CONTAM, axes(), {}, "x.md")
+    assert "未提供（没有 sae_L18.md）" in s2 and "已跳过" not in s2
+
+
+def test_h4_names_removed_axes_per_layer_and_falls_back():
+    a = axes(v_ok=True)
+    a["residual_axes"] = {"anger__resid3": {"9": ["V", "D"], "18": ["V", "A", "D"]}}
+    s = render(OK_SEP, ax=a)
+    assert "第 9 层去掉 V、D" in s and "第 18 层去掉 V、A、D" in s
+    del a["residual_axes"]
+    assert "H4 可以在第 9、18 层检验" in render(OK_SEP, ax=a)
+
+
+def test_parse_sae_tops_skipped_label_is_empty_list():
+    md = "## anger\n\n### 1. 特征 12（余弦 0.310）\n"
+    assert _load_08().parse_sae_tops(md) == {"anger": [(12, 0.31)], "fear": []}

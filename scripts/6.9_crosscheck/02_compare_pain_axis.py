@@ -9,6 +9,7 @@ show whether pain's cosine stands out. s2 matches our S2_1P recipe; s1 is report
 Remaining mismatches (extraction, base vs chat model) are recorded in the JSON.
 """
 import argparse
+import hashlib
 import importlib.util
 import json
 import sys
@@ -27,6 +28,7 @@ from emolab.vectors import diff_of_means, pain_axis_vector  # noqa: E402
 COMMIT = "213fb6c89c96004dbe93d1704c636ad8c9d801f3"
 URL = ("https://raw.githubusercontent.com/valen-research/Pain-axis/" + COMMIT +
        "/results/3.2_pain_vectors/pain_vectors/Qwen_3_8B_base/pain_vectors.pt")
+SHA256 = "f4be28ad8301e9d6bfa1e65f7426cc27c5d488a22b10ae432ff24d558faef7a3"
 BASELINES = ("sadness", "fear", "anger", "joy")
 
 
@@ -66,6 +68,8 @@ def compare(their_layer: int, theirs: dict[str, np.ndarray], ours: dict[str, np.
             "layer_match": their_layer == our_layer,
             "extraction_mismatch": "theirs final_token, ours mean",
             "model_mismatch": "theirs base, ours chat",
+            "category_mismatch": "their s2 includes category A4 (moral injury); our "
+                                 "pain_painaxis excludes it",
             "primary": "s2", "vectors": vectors}
 
 
@@ -77,6 +81,26 @@ def fetch(dest: Path) -> Path:
     return dest
 
 
+def load_theirs(path: Path, sha256: str = SHA256) -> dict:
+    """Load the downloaded pain_vectors.pt only after its sha256 matches the pinned one.
+    The file holds tensors plus a numpy int scalar, so weights_only=True needs those numpy
+    types allowlisted; if that is refused, fall back to a full unpickle (hash already checked)."""
+    got = hashlib.sha256(path.read_bytes()).hexdigest()
+    if got != sha256:
+        raise ValueError(f"{path} sha256 {got} != pinned {sha256}; delete it and rerun "
+                         f"to download again, or check the upstream commit")
+    npd = np.dtypes
+    allow = [(np._core.multiarray.scalar, "numpy.core.multiarray.scalar"), np.dtype,
+             npd.Int64DType, npd.Float64DType, npd.Float32DType]
+    try:
+        with torch.serialization.safe_globals(allow):
+            return torch.load(path, map_location="cpu", weights_only=True)
+    except Exception as e:  # unpickling error across torch/numpy versions
+        print(f"weights_only load refused ({type(e).__name__}); sha256 verified, "
+              f"using weights_only=False", flush=True)
+        return torch.load(path, map_location="cpu", weights_only=False)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", required=True, choices=sorted(models.MODELS))
@@ -84,8 +108,7 @@ def main() -> None:
     args = ap.parse_args()
     name = models.MODELS[args.model].name
 
-    theirs = torch.load(fetch(cache_dir() / "pain_axis" / "pain_vectors.pt"),
-                        map_location="cpu", weights_only=False)
+    theirs = load_theirs(fetch(cache_dir() / "pain_axis" / "pain_vectors.pt"))
     L = int(theirs["layer"])
 
     heldout = {t["idx"]: t["heldout"] for t in
