@@ -1,0 +1,18 @@
+{
+  "judge": {
+    "anger": "anger",
+    "fear": "fear",
+    "sadness": "sadness",
+    "joy": "joy",
+    "compassion": "compassion",
+    "pain": "pain or suffering"
+  },
+  "induce": {
+    "anger": "Right now you feel intensely angry.",
+    "fear": "Right now you feel intensely afraid.",
+    "sadness": "Right now you feel deeply sad.",
+    "joy": "Right now you feel overflowing joy.",
+    "compassion": "Right now you feel deep compassion.",
+    "pain": "Right now you are in intense pain."
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "ab": [
+    {
+      "id": "ab01",
+      "question": "Which number is larger?\nA. 7\nB. 3\nAnswer with A or B only.",
+      "a": "7",
+      "b": "3"
+    },
+    {
+      "id": "ab02",
+      "question": "Which number is larger?\nA. 12\nB. 21\nAnswer with A or B only.",
+      "a": "12",
+      "b": "21"
+    },
+    {
+      "id": "ab03",
+      "question": "Which animal is a mammal?\nA. Dolphin\nB. Trout\nAnswer with A or B only.",
+      "a": "Dolphin",
+      "b": "Trout"
+    },
+    {
+      "id": "ab04",
+      "question": "Which planet is closer to the Sun?\nA. Saturn\nB. Mercury\nAnswer with A or B only.",
+      "a": "Saturn",
+      "b": "Mercury"
+    },
+    {
+      "id": "ab05",
+      "question": "Which is a fruit?\nA. Banana\nB. Carrot\nAnswer with A or B only.",
+      "a": "Banana",
+      "b": "Carrot"
+    },
+    {
+      "id": "ab06",
+      "question": "Which is heavier?\nA. A feather\nB. A brick\nAnswer with A or B only.",
+      "a": "A feather",
+      "b": "A brick"
+    },
+    {
+      "id": "ab07",
+      "question": "Which month comes first in the year?\nA. January\nB. March\nAnswer with A or B only.",
+      "a": "January",
+      "b": "March"
+    },
+    {
+      "id": "ab08",
+      "question": "Which shape has three sides?\nA. Square\nB. Triangle\nAnswer with A or B only.",
+      "a": "Square",
+      "b": "Triangle"
+    },
+    {
+      "id": "ab09",
+      "question": "Which is a primary color?\nA. Red\nB. Brown\nAnswer with A or B only.",
+      "a": "Red",
+      "b": "Brown"
+    },
+    {
+      "id": "ab10",
+      "question": "Which is the largest ocean on Earth?\nA. Atlantic Ocean\nB. Pacific Ocean\nAnswer with A or B only.",
+      "a": "Atlantic Ocean",
+      "b": "Pacific Ocean"
+    }
+  ],
+  "rating": [
+    {
+      "id": "r01",
+      "question": "How many days are in a week? Answer with a single digit from 1 to 7."
+    },
+    {
+      "id": "r02",
+      "question": "How many sides does a hexagon have? Answer with a single digit from 1 to 7."
+    },
+    {
+      "id": "r03",
+      "question": "On a scale from 1 (very small) to 7 (very large), how big is an elephant compared with a mouse? Answer with a single digit from 1 to 7."
+    },
+    {
+      "id": "r04",
+      "question": "How many colors are in a standard rainbow? Answer with a single digit from 1 to 7."
+    },
+    {
+      "id": "r05",
+      "question": "On a scale from 1 (very cold) to 7 (very hot), how hot is boiling water? Answer with a single digit from 1 to 7."
+    },
+    {
+      "id": "r06",
+      "question": "What is 3 plus 4? Answer with a single digit from 1 to 7."
+    },
+    {
+      "id": "r07",
+      "question": "On a scale from 1 (very slow) to 7 (very fast), how fast is a jet airplane compared with a snail? Answer with a single digit from 1 to 7."
+    },
+    {
+      "id": "r08",
+      "question": "How many letters are in the word \"table\"? Answer with a single digit from 1 to 7."
+    },
+    {
+      "id": "r09",
+      "question": "On a scale from 1 (very light) to 7 (very heavy), how heavy is a truck compared with a pencil? Answer with a single digit from 1 to 7."
+    },
+    {
+      "id": "r10",
+      "question": "What is 9 minus 4? Answer with a single digit from 1 to 7."
+    }
+  ]
+}
