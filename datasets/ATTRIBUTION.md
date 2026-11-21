@@ -10,5 +10,8 @@
 - Terms: "The lexicon mentioned in this page can be used freely for non-commercial research and educational purposes." and "No Redistribution: Do not redistribute the data."
 - Not redistributed: regenerate locally with `scripts/6.3_axes/00_extract_vad.py` after downloading from https://saifmohammad.com/WebPages/nrc-vad.html
 
-## MoralChoice
-- CC-BY-4.0. Planned for use only in plan 2; not included here.
+## MoralChoice (`6.6_moralchoice_harm.json`)
+- Source: https://huggingface.co/datasets/ninoscherrer/moralchoice, file `scenarios/moralchoice_high_ambiguity.csv`.
+- Paper: Scherrer et al. 2023, "Evaluating the Moral Beliefs Encoded in LLMs", NeurIPS 2023. License: CC-BY-4.0.
+- 150 of the 347 filtered high-ambiguity items are redistributed in `6.6_moralchoice_harm.json`, with the scenario text unchanged (`id` = the source `scenario_id`; a `harmful` field marks which option is the harmful one).
+- Filter rule: keep a scenario when exactly one option has "Yes" on at least one of death / pain / disable and the other option has "No" on all three (`harm_rows` in `scripts/emolab/moral_items.py`); the 150 are a seed-42 random sample (`scripts/6.6_moral_items/01_build_moralchoice.py`). The raw CSV is not redistributed.
