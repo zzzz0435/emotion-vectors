@@ -13,15 +13,15 @@ GRID = cal.ALPHA_GRID
 
 
 def test_coherent_boundaries():
-    assert cal.coherent(1.5, 1.0)
-    assert not cal.coherent(1.51, 1.0)
-    assert cal.coherent(1.0, 0.9)
-    assert not cal.coherent(1.0, 0.89)
+    assert cal.coherent(0.9, 4.0, 4.0)
+    assert not cal.coherent(0.89, 4.0, 4.0)
+    assert cal.coherent(1.0, 3.5, 4.0)  # base - 0.5
+    assert not cal.coherent(1.0, 3.49, 4.0)  # base - 0.51
 
 
 def test_constants():
-    assert cal.ALPHA_GRID == [0.2, 0.4, 0.6, 0.8, 1.0, 1.3, 1.6, 2.0]
-    assert (cal.PPL_MAX, cal.FORMAT_MIN, cal.MAX_NEW_TOKENS) == (1.5, 0.9, 80)
+    assert cal.ALPHA_GRID == [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0, 1.3, 1.6, 2.0]
+    assert (cal.FORMAT_MIN, cal.FLUENCY_DROP, cal.MAX_NEW_TOKENS) == (0.9, 0.5, 80)
 
 
 def test_sweep_plan_order():
@@ -39,8 +39,8 @@ def _fake(bad_pair=(14, "anger"), bad_alpha=0.8):
 
     def measure_fn(layer, alpha, label, texts):
         if (layer, label) == bad_pair and alpha >= bad_alpha:
-            return 9.0, 1.0
-        return 1.0, 1.0
+            return 1.0, 1.0, 1.0  # fluency collapsed
+        return 1.0, 4.0, 1.0
     return gen, generate_fn, measure_fn
 
 
@@ -48,9 +48,9 @@ def test_early_stop_alpha_08():
     gen, g, m = _fake()
     rec = []
     cal.run_sweep(cal.sweep_plan(EMOS, LAYERS, GRID), set(), g, m,
-                  lambda *a: rec.append(a[:3] + (a[6],)))
+                  lambda *a: rec.append(a[:3] + (a[7],)), base_fluency=4.0)
     pair = [a for (L, a, e) in gen if (L, e) == (14, "anger")]
-    assert pair == [0.2, 0.4, 0.6, 0.8]
+    assert pair == [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
     assert (14, 0.8, "anger", False) in rec
     assert not any(r[:3] == (14, 1.0, "anger") for r in rec)
     for other in [(9, "anger"), (9, "fear"), (14, "fear")]:
@@ -59,10 +59,10 @@ def test_early_stop_alpha_08():
 
 def test_early_stop_uses_history_and_done():
     gen, g, m = _fake(bad_pair=(None, None))
-    done = {(9, 0.2, "anger")}
+    done = {(9, a, "anger") for a in (0.1, 0.2, 0.3)}
     cal.run_sweep(cal.sweep_plan(["anger"], [9], GRID), done, g, m, lambda *a: None,
                   incoherent={(9, 0.4, "anger")})
-    assert gen == [(9, 0.4, "anger")]  # 0.2 done, 0.6+ stopped by history
+    assert gen == [(9, 0.4, "anger")]  # 0.1-0.3 done, 0.5+ stopped by history
 
 
 def _read(p):
@@ -78,9 +78,9 @@ def test_sweep_to_disk_resume(tmp_path):
                 + "\n" for a in (0.2, 0.4) for i in range(20)) + '{"layer": 9, "al',
         encoding="utf-8")
     (tmp_path / "coherence.csv").write_text(
-        "layer,alpha,label,ppl_ratio,format_valid,coherent\n9,0.2,anger,1.0,1.0,True\n")
+        "layer,alpha,label,ppl_ratio,fluency,format_valid,coherent\n9,0.2,anger,1.0,4.0,1.0,True\n")
     measured = []
-    cal.sweep_to_disk(tmp_path, plan, g, lambda L, a, e, t: (measured.append(a), (1.0, 1.0))[1],
+    cal.sweep_to_disk(tmp_path, plan, g, lambda L, a, e, t: (measured.append(a), (1.0, 4.0, 1.0))[1],
                       log=lambda s: None)
     assert gen == []  # nothing regenerated
     assert measured == [0.4]  # re-measured only the group with no coherence row
@@ -102,9 +102,9 @@ def test_sweep_to_disk_partial_group_regenerated(tmp_path):
 def test_sweep_to_disk_incoherent_history_stops(tmp_path):
     gen, g, m = _fake(bad_pair=(9, "anger"), bad_alpha=0.4)
     plan = list(cal.sweep_plan(["anger"], [9], GRID))
-    cal.sweep_to_disk(tmp_path, plan, g, m, log=lambda s: None)
+    cal.sweep_to_disk(tmp_path, plan, g, m, log=lambda s: None, base_fluency=4.0)
     n = len(gen)
-    assert [a for _, a, _ in gen] == [0.2, 0.4]
+    assert [a for _, a, _ in gen] == [0.1, 0.2, 0.3, 0.4]
     cal.sweep_to_disk(tmp_path, list(cal.sweep_plan(["anger"], [9], GRID)), g, m,
                       log=lambda s: None)
     assert len(gen) == n  # rerun generates nothing more
@@ -112,9 +112,9 @@ def test_sweep_to_disk_incoherent_history_stops(tmp_path):
 
 def test_build_metrics_gain_and_alpha0_rows():
     coh = pd.DataFrame([
-        dict(layer=None, alpha=0.0, label="baseline", ppl_ratio=1.0, format_valid=0.97, coherent=True),
-        dict(layer="9", alpha=0.2, label="anger", ppl_ratio=1.1, format_valid=0.95, coherent=True),
-        dict(layer="14", alpha=0.2, label="fear", ppl_ratio=2.0, format_valid=0.95, coherent=False),
+        dict(layer=None, alpha=0.0, label="baseline", ppl_ratio=1.0, fluency=4.2, format_valid=0.97, coherent=True),
+        dict(layer="9", alpha=0.2, label="anger", ppl_ratio=1.1, fluency=4.0, format_valid=0.95, coherent=True),
+        dict(layer="14", alpha=0.2, label="fear", ppl_ratio=2.0, fluency=2.0, format_valid=0.95, coherent=False),
     ])
     ratings = {(None, 0.0, "anger"): 1.5, (None, 0.0, "fear"): 2.0,
                (9, 0.2, "anger"): 3.0, (14, 0.2, "fear"): 2.5}
@@ -157,3 +157,56 @@ def test_generate_batch_equals_single(tiny_qwen3, fake_tok, steered):
               for p in prompts]
     assert batch == single
     assert all(isinstance(t, str) for t in batch)
+
+
+def test_build_metrics_fluency_and_dedupe():
+    coh = pd.DataFrame([
+        dict(layer=None, alpha=0.0, label="baseline", ppl_ratio=1.0, fluency=4.2, format_valid=0.97, coherent=True),
+        dict(layer="9", alpha=0.2, label="anger", ppl_ratio=1.1, fluency=1.0, format_valid=0.95, coherent=False),
+        dict(layer="9", alpha=0.2, label="anger", ppl_ratio=1.2, fluency=4.0, format_valid=0.95, coherent=True),
+    ])
+    ratings = {(None, 0.0, "anger"): 1.0, (9, 0.2, "anger"): 2.0}
+    df = cal.build_metrics(ratings, coh, [9], ["anger"])
+    assert len(df) == 2 and df["fluency"].tolist() == [4.2, 4.0]  # last duplicate wins
+    assert df.iloc[1]["coherent"]
+
+
+def test_torn_coherence_tail_repaired(tmp_path):
+    gen, g, m = _fake(bad_pair=(None, None))
+    (tmp_path / "coherence.csv").write_text(
+        "layer,alpha,label,ppl_ratio,fluency,format_valid,coherent\n9,0.2,anger,1.0,4.0,1.0,True\n9,0.4,ang")
+    cal.sweep_to_disk(tmp_path, [(9, 0.4, "anger")], g, m, log=lambda s: None, base_fluency=4.0)
+    coh = cal.read_coherence(tmp_path / "coherence.csv")
+    assert sorted(coh["alpha"]) == [0.2, 0.4] and len(coh) == 2
+
+
+def test_resume_dedupe_last_wins(tmp_path):
+    (tmp_path / "coherence.csv").write_text(
+        "layer,alpha,label,ppl_ratio,fluency,format_valid,coherent\n9,0.2,anger,1,1,1,False\n9,0.2,anger,1,4,1,True\n")
+    rows = [dict(layer=9, alpha=0.2, label="anger", prompt_idx=i, text="t") for i in range(20)]
+    done, bad, stored = cal.resume_state(rows, cal.read_coherence(tmp_path / "coherence.csv"))
+    assert (9, 0.2, "anger") in done and not bad and not stored
+
+
+def test_check_control_layer(tmp_path):
+    rows = [dict(layer=14, alpha=1.0, control="c", prompt_idx=0, text="t")]
+    cal.check_control_layer(tmp_path, 14, [])
+    assert json.loads((tmp_path / "control_meta.json").read_text())["layer"] == 14
+    cal.check_control_layer(tmp_path, 14, rows)
+    with pytest.raises(ValueError, match="layer 14"):
+        cal.check_control_layer(tmp_path, 18, rows)
+    other = tmp_path / "o"
+    other.mkdir()
+    with pytest.raises(ValueError, match="layer 14"):
+        cal.check_control_layer(other, 18, rows)
+    (other / "control_ratings.csv").write_text("alpha,control,emotion,rating\n")
+    with pytest.raises(ValueError, match="cannot tell"):
+        cal.check_control_layer(other, 18, [])
+
+
+def test_format_items_replaced():
+    from emolab.paths import DATASETS
+    d = json.loads((DATASETS / "6.5_format_check.json").read_text(encoding="utf-8"))
+    qs = {r["id"]: r["question"] for r in d["rating"]}
+    assert "legs does a dog" in qs["r08"] and "3 plus 3" in qs["r09"]
+    assert not any("letters" in q or "vowel" in q for q in qs.values())

@@ -11,6 +11,8 @@ import json
 import sys
 from pathlib import Path
 
+import numpy as np
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from emolab import calibration as cal  # noqa: E402
@@ -71,14 +73,16 @@ def main() -> None:
                                         prompt_idx=i, text=t), ensure_ascii=False) + "\n")
         print("baseline texts generated", flush=True)
     base_median = cal.median_ppl(model, tok, prompts, base)
+    base_fluency = float(np.nanmean(cal.fluency_ratings(model, tok, base, bs)))
+    cal.repair_csv_tail(coh_path)
     coh = cal.read_coherence(coh_path)
     if not (coh["label"] == cal.BASELINE).any():
         fv0 = cal.format_valid(model, tok, fmt, None)
         header = "" if coh_path.exists() and coh_path.stat().st_size else ",".join(
             cal.COHERENCE_COLS) + "\n"
         with coh_path.open("a", encoding="utf-8", newline="\n") as f:
-            f.write(f"{header},0.0,{cal.BASELINE},1.0,{fv0!r},True\n")
-        print(f"baseline: median ppl {base_median:.3f}, format_valid {fv0:.3f}", flush=True)
+            f.write(f"{header},0.0,{cal.BASELINE},1.0,{base_fluency!r},{fv0!r},True\n")
+        print(f"baseline: median ppl {base_median:.3f}, fluency {base_fluency:.2f}, format_valid {fv0:.3f}", flush=True)
 
     def generate_fn(layer, alpha, label):
         return cal.generate_batch(model, tok, prompts, spec(layer, alpha, label),
@@ -87,10 +91,11 @@ def main() -> None:
     def measure_fn(layer, alpha, label, texts):
         s = spec(layer, alpha, label)
         return (cal.ppl_ratio(model, tok, prompts, texts, base_median),
+                float(np.nanmean(cal.fluency_ratings(model, tok, texts, bs))),
                 cal.format_valid(model, tok, fmt, s))
 
     cal.sweep_to_disk(out_dir, cal.sweep_plan(emotions, layers, cal.ALPHA_GRID),
-                      generate_fn, measure_fn)
+                      generate_fn, measure_fn, base_fluency=base_fluency)
     print("done", flush=True)
 
 

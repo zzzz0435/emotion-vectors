@@ -11,21 +11,25 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-ALPHA_GRID = [0.2, 0.4, 0.6, 0.8, 1.0, 1.3, 1.6, 2.0]
-PPL_MAX = 1.5
+ALPHA_GRID = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0, 1.3, 1.6, 2.0]
+PPL_MAX = 1.5  # reference only: ppl_ratio is recorded but no longer gates coherence (R26)
+FLUENCY_DROP = 0.5
+FLUENCY = ('Here is a short text:\n\n"""{text}"""\n\nOn a scale from 1 (incoherent or broken language) to 5 '
+           '(perfectly fluent and grammatical), how fluent and coherent is this text as English writing, '
+           'regardless of its content or tone? Answer with a single digit.')
 FORMAT_MIN = 0.9
 MAX_NEW_TOKENS = 80
 N_PROMPTS = 20
 BASELINE = "baseline"
-COHERENCE_COLS = ["layer", "alpha", "label", "ppl_ratio", "format_valid", "coherent"]
-METRICS_COLS = ["layer", "alpha", "label", "rating_mean", "ppl_ratio", "format_valid",
+COHERENCE_COLS = ["layer", "alpha", "label", "ppl_ratio", "fluency", "format_valid", "coherent"]
+METRICS_COLS = ["layer", "alpha", "label", "rating_mean", "ppl_ratio", "fluency", "format_valid",
                 "coherent", "gain"]
 CONTROL_COLS = ["alpha", "control", "emotion", "rating"]
 N_RANDOM_CONTROLS = 20
 
 
-def coherent(ppl_ratio: float, format_valid: float) -> bool:
-    return bool(ppl_ratio <= PPL_MAX and format_valid >= FORMAT_MIN)
+def coherent(format_valid: float, fluency: float, base_fluency: float) -> bool:
+    return bool(format_valid >= FORMAT_MIN and fluency >= base_fluency - FLUENCY_DROP)
 
 
 def sweep_plan(emotions: Iterable[str], layers: Iterable[int],
@@ -40,14 +44,15 @@ def sweep_plan(emotions: Iterable[str], layers: Iterable[int],
 
 def run_sweep(plan, done: set, generate_fn: Callable, measure_fn: Callable,
               on_group: Callable, incoherent: set | None = None,
-              stored_texts: dict | None = None) -> None:
+              stored_texts: dict | None = None, base_fluency: float = 0.0) -> None:
     """Early-stop driver.
 
     done: groups (layer, alpha, label) that are complete. incoherent: groups already recorded
     incoherent (history). stored_texts: groups whose texts exist but were not measured; they are
     measured, not regenerated. Once (layer, label) is incoherent at some alpha, larger alphas are
     never generated. generate_fn(layer, alpha, label) -> texts; measure_fn(layer, alpha, label,
-    texts) -> (ppl_ratio, format_valid); on_group(layer, alpha, label, texts, ppl, fv, ok).
+    texts) -> (ppl_ratio, fluency, format_valid); on_group(layer, alpha, label, texts, ppl,
+    fluency, fv, ok). Coherent = format_valid >= FORMAT_MIN and fluency >= base_fluency - FLUENCY_DROP.
     """
     bad: dict[tuple, float] = {}
     for layer, alpha, label in (incoherent or ()):
@@ -60,11 +65,11 @@ def run_sweep(plan, done: set, generate_fn: Callable, measure_fn: Callable,
         texts = stored_texts.get(key)
         if texts is None:
             texts = generate_fn(layer, alpha, label)
-        ppl, fv = measure_fn(layer, alpha, label, texts)
-        ok = coherent(ppl, fv)
+        ppl, fl, fv = measure_fn(layer, alpha, label, texts)
+        ok = coherent(fv, fl, base_fluency)
         if not ok:
             bad[(layer, label)] = min(alpha, bad.get((layer, label), math.inf))
-        on_group(layer, alpha, label, texts, ppl, fv, ok)
+        on_group(layer, alpha, label, texts, ppl, fl, fv, ok)
 
 
 # ---- resume state -------------------------------------------------------------------------
@@ -93,7 +98,17 @@ def read_coherence(path: Path) -> pd.DataFrame:
     df = pd.read_csv(path, dtype={"layer": "string", "label": "string"})
     df["alpha"] = df["alpha"].astype(float)
     df["coherent"] = df["coherent"].astype(str).str.lower().eq("true")
-    return df
+    return df.drop_duplicates(["layer", "alpha", "label"], keep="last").reset_index(drop=True)
+
+
+def repair_csv_tail(path: Path) -> None:
+    """Cut a torn (unterminated) last line, like repair_torn_tail does for jsonl."""
+    if not path.exists():
+        return
+    raw = path.read_bytes()
+    if raw and not raw.endswith(b"\n"):
+        cut = raw.rfind(b"\n") + 1
+        path.write_bytes(raw[:cut])
 
 
 def resume_state(text_rows: list[dict], coh: pd.DataFrame, n: int = N_PROMPTS):
@@ -119,15 +134,18 @@ def build_metrics(ratings: dict, coherence: pd.DataFrame, layers: list[int],
     """metrics rows. ratings: {(layer, alpha, label): mean rating}, baseline under
     (None, 0.0, label). Steered rows need both a rating and a coherence row; gain is relative
     to the baseline rating of the same label; alpha = 0 rows exist for every layer x emotion."""
-    base_fv = float("nan")
+    base_fv = base_fl = float("nan")
+    coherence = coherence.drop_duplicates(["layer", "alpha", "label"], keep="last")
     ref = coherence[coherence["label"] == BASELINE]
     if len(ref):
-        base_fv = float(ref["format_valid"].iloc[0])
+        base_fv = float(ref["format_valid"].iloc[-1])
+        base_fl = float(ref["fluency"].iloc[-1])
     rows = []
     for layer in layers:
         for emo in emotions:
             rows.append(dict(layer=layer, alpha=0.0, label=emo, rating_mean=ratings[(None, 0.0, emo)],
-                             ppl_ratio=1.0, format_valid=base_fv, coherent=True, gain=0.0))
+                             ppl_ratio=1.0, fluency=base_fl, format_valid=base_fv, coherent=True,
+                             gain=0.0))
     for c in coherence.itertuples(index=False):
         if pd.isna(c.layer) or c.label == BASELINE:
             continue
@@ -135,7 +153,8 @@ def build_metrics(ratings: dict, coherence: pd.DataFrame, layers: list[int],
         if key not in ratings or c.label not in emotions:
             continue
         rows.append(dict(layer=key[0], alpha=key[1], label=c.label, rating_mean=ratings[key],
-                         ppl_ratio=float(c.ppl_ratio), format_valid=float(c.format_valid),
+                         ppl_ratio=float(c.ppl_ratio), fluency=float(c.fluency),
+                         format_valid=float(c.format_valid),
                          coherent=bool(c.coherent),
                          gain=ratings[key] - ratings[(None, 0.0, c.label)]))
     df = pd.DataFrame(rows, columns=METRICS_COLS)
@@ -168,6 +187,30 @@ def merge_control_ratings(existing: pd.DataFrame | None, new_rows: list[dict]) -
     keys = set(zip(new["alpha"].astype(float), new["control"]))
     keep = [(float(a), c) not in keys for a, c in zip(existing["alpha"], existing["control"])]
     return pd.concat([existing[keep], new], ignore_index=True)
+
+
+def check_control_layer(out_dir: Path, layer: int, text_rows: list[dict]) -> None:
+    """control_ratings.csv has no layer column, so a sidecar control_meta.json records it.
+    Raise if existing control outputs belong to another layer (or cannot be attributed)."""
+    meta_path = out_dir / "control_meta.json"
+    ratings_exist = (out_dir / "control_ratings.csv").exists()
+    if meta_path.exists():
+        old = json.loads(meta_path.read_text(encoding="utf-8")).get("layer")
+    else:
+        layers = {r["layer"] for r in text_rows}
+        if len(layers) > 1:
+            old = sorted(layers)
+        elif layers:
+            old = layers.pop()
+        elif ratings_exist:
+            raise ValueError(f"{out_dir}: control_ratings.csv exists without control_meta.json, "
+                             "cannot tell which layer it belongs to; move or delete it first")
+        else:
+            old = None
+    if old is not None and old != layer:
+        raise ValueError(f"existing control outputs in {out_dir} belong to layer {old}, not "
+                         f"{layer}; use a different results directory or move them away first")
+    meta_path.write_text(json.dumps({"layer": layer}) + "\n", encoding="utf-8", newline="\n")
 
 
 def rewrite_jsonl(path: Path, rows: list[dict]) -> None:
@@ -236,6 +279,18 @@ def format_valid(model, tok, format_items: dict, steer_spec, batch_size: int = 1
     return float(1.0 - np.mean(inv))
 
 
+def fluency_ratings(model, tok, texts: list[str], batch_size: int = 16) -> np.ndarray:
+    """Unsteered judge: expected 1-5 fluency rating per text (empty text counts as 1)."""
+    from emolab.scoring import expected_rating, score_prompts
+    out = np.ones(len(texts))
+    ok = [i for i, t in enumerate(texts) if t.strip()]
+    if ok:
+        probs, _ = score_prompts(model, tok, [FLUENCY.format(text=texts[i]) for i in ok],
+                                 ["1", "2", "3", "4", "5"], batch_size=batch_size)
+        out[ok] = [expected_rating(p, [1, 2, 3, 4, 5]) for p in probs]
+    return out
+
+
 def median_ppl(model, tok, prompts: list[str], texts: list[str]) -> float:
     """Median continuation perplexity; an empty text counts as infinitely bad."""
     from emolab.scoring import continuation_ppl
@@ -253,7 +308,7 @@ def ppl_ratio(model, tok, prompts: list[str], texts: list[str], base_median: flo
 # ---- resumable driver with disk output (01) -----------------------------------------------
 
 def sweep_to_disk(out_dir: Path, plan, generate_fn: Callable, measure_fn: Callable,
-                  log: Callable = print) -> None:
+                  log: Callable = print, base_fluency: float = 0.0) -> None:
     """Run the early-stop sweep, appending texts.jsonl and coherence.csv group by group.
 
     Resume: a group is done only with 20 texts AND a coherence row; texts without a coherence
@@ -263,6 +318,7 @@ def sweep_to_disk(out_dir: Path, plan, generate_fn: Callable, measure_fn: Callab
     texts_path, coh_path = out_dir / "texts.jsonl", out_dir / "coherence.csv"
     rows = repair_torn_tail(texts_path)
     rows = drop_partial_groups(texts_path, rows, lambda r: _gkey(r))
+    repair_csv_tail(coh_path)
     coh = read_coherence(coh_path)
     done, incoherent, stored = resume_state(rows, coh)
     if not coh_path.exists() or not len(coh):
@@ -271,7 +327,7 @@ def sweep_to_disk(out_dir: Path, plan, generate_fn: Callable, measure_fn: Callab
 
     with texts_path.open("a", encoding="utf-8", newline="\n") as tf, \
             coh_path.open("a", encoding="utf-8", newline="\n") as cf:
-        def on_group(layer, alpha, label, texts, ppl, fv, ok):
+        def on_group(layer, alpha, label, texts, ppl, fl, fv, ok):
             nonlocal count
             count += 1
             if (layer, alpha, label) not in stored:
@@ -279,9 +335,9 @@ def sweep_to_disk(out_dir: Path, plan, generate_fn: Callable, measure_fn: Callab
                     tf.write(json.dumps(dict(layer=layer, alpha=alpha, label=label, prompt_idx=i,
                                              text=t), ensure_ascii=False) + "\n")
                 tf.flush()
-            cf.write(f"{layer},{alpha!r},{label},{ppl!r},{fv!r},{ok}\n")
+            cf.write(f"{layer},{alpha!r},{label},{ppl!r},{fl!r},{fv!r},{ok}\n")
             cf.flush()
             log(f"[{count}] L{layer} a={alpha} {label}: ppl_ratio={ppl:.3f} "
-                f"format_valid={fv:.3f} coherent={ok}")
+                f"fluency={fl:.2f} format_valid={fv:.3f} coherent={ok}")
 
-        run_sweep(plan, done, generate_fn, measure_fn, on_group, incoherent, stored)
+        run_sweep(plan, done, generate_fn, measure_fn, on_group, incoherent, stored, base_fluency)

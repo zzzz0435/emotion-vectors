@@ -22,6 +22,7 @@ from emolab import calibration as cal  # noqa: E402
 from emolab import models  # noqa: E402
 from emolab.conditions import load_labels, random_directions  # noqa: E402
 from emolab.paths import DATASETS, RESULTS, cache_dir, results_dir  # noqa: E402
+from emolab.vectors import as_bool  # noqa: E402
 from emolab.scoring import SteerSpec, judge_ratings  # noqa: E402
 from emolab.stories import repair_torn_tail  # noqa: E402
 
@@ -57,7 +58,7 @@ def run_metrics(model, tok, out_dir: Path, emotions: list[str], judge: dict, bs:
     print(f"wrote {len(df)} rows to {out_dir / 'metrics.csv'}", flush=True)
 
 
-def control_directions(vec, name: str, layer: int, concepts: list[str]) -> dict:
+def control_directions(vec, name: str, layer: int, concepts: list[str]) -> dict:  # noqa: C901
     """control name -> unit direction (concept vectors + 20 random, random file created once)."""
     import torch
     rnd_path = RESULTS / "6.7_runs" / name / f"random_directions_L{layer}.npy"
@@ -66,7 +67,12 @@ def control_directions(vec, name: str, layer: int, concepts: list[str]) -> dict:
     else:
         acts_dir = cache_dir() / "6.2" / name
         index = pd.read_csv(acts_dir / "index.csv")
-        train = ~index["heldout"].astype(bool).to_numpy()
+        train = ~as_bool(index["heldout"]).to_numpy()
+        expect = vec["meta"]["n_train"]
+        got = {lab: int(((index["label"].to_numpy() == lab) & train).sum()) for lab in expect}
+        if got != {k: int(v) for k, v in expect.items()}:
+            raise ValueError("train-row mask disagrees with vectors.pt meta n_train; "
+                             "index.csv does not match the vectors")
         acts = np.load(acts_dir / f"acts_L{layer}.npy", mmap_mode="r")
         rnd = random_directions(np.asarray(acts)[train], cal.N_RANDOM_CONTROLS, seed=42)
         rnd_path.parent.mkdir(parents=True, exist_ok=True)
@@ -89,14 +95,15 @@ def run_controls(args, name: str, emotions: list[str], judge: dict, prompts: lis
     dirs = control_directions(vec, name, layer, concepts)
     names = cal.control_names(concepts)
 
-    model, tok = models.load(args.model)
     tpath, rpath = out_dir / "control_texts.jsonl", out_dir / "control_ratings.csv"
     rows = repair_torn_tail(tpath)
+    cal.check_control_layer(out_dir, layer, rows)  # before the model loads
     key = lambda r: (r["layer"], float(r["alpha"]), r["control"])  # noqa: E731
     rows = cal.drop_partial_groups(tpath, rows, key)
     have: dict = {}
     for r in rows:
         have.setdefault(key(r), {})[int(r["prompt_idx"])] = r["text"]
+    model, tok = models.load(args.model)
     existing = pd.read_csv(rpath) if rpath.exists() else None
 
     with tpath.open("a", encoding="utf-8", newline="\n") as f:
