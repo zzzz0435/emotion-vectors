@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pytest
 import pandas as pd
 import torch
 
@@ -209,7 +210,34 @@ def test_scripts_end_to_end(tmp_path):
     r = rv["unit"]["pain__resid3"]
     assert r.shape == (2, 64)
     assert meta["residuals"]["pain__resid3"]["3"] == "ok"
+    assert rv["status"]["pain__resid3"] == {3: "ok", 7: "ok"}
+    assert np.allclose(ax.get_residual(rv, "pain__resid3", 7), r[1].double().numpy())
     # residual is orthogonal to the for_pain axes it removed, for each layer
     for i, L in enumerate(layers):
         for k in "VAD":
             assert abs(float(r[i] @ pt["fits"]["for_pain"][L][k])) < 1e-5
+
+
+def test_fit_axes_raises_when_excluded_label_absent():
+    unit, df, _ = _planted_set()
+    del unit["e0"]
+    with pytest.raises(ValueError, match="absent"):
+        fit_axes(unit, df, exclude={"e0", "e1"})
+
+
+def test_fit_axes_raises_when_too_few_emotions():
+    unit, df, _ = _planted_set(labels=[f"e{i}" for i in range(16)])
+    with pytest.raises(ValueError, match="need >= 15"):
+        fit_axes(unit, df, exclude={"e0", "e1"})
+    fit_axes(unit, df, exclude={"e0"})  # 15 left is fine
+
+
+def test_get_residual_ok_and_untestable():
+    payload = {"layers": [3, 7],
+               "unit": {"a": torch.arange(6.0).reshape(2, 3)},
+               "status": {"a": {3: "untestable", 7: "ok"}}}
+    assert np.allclose(ax.get_residual(payload, "a", 7), [3, 4, 5])
+    with pytest.raises(ValueError, match="'a'.*layer 3"):
+        ax.get_residual(payload, "a", 3)
+    with pytest.raises(ValueError, match="'b'"):
+        ax.get_residual(payload, "b", 7)

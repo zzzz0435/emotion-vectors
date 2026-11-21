@@ -1,7 +1,8 @@
 """Build residual emotion vectors (axes removed) from axes.pt; write residuals.pt.
 
 Same format as vectors.pt["unit"] ({name: Tensor[n_layers, d]}). Layers where the fit set's
-V axis is unreliable are "untestable": recorded in axes.json and left as NaN rows.
+V axis is unreliable are "untestable": recorded in axes.json and left as NaN rows;
+residuals.pt carries `status` {name: {layer: ok|untestable}} -- read rows via emolab.axes.get_residual.
 """
 import argparse
 import json
@@ -23,7 +24,8 @@ def run(vectors_path: Path, out: Path) -> None:
     layers = vec["layers"]
     unit_out = {name: torch.full((len(layers), vec["unit"][emo].shape[1]), float("nan"))
                 for name, (emo, _, _) in axes.RESIDUALS.items()}
-    status = {name: {} for name in axes.RESIDUALS}
+    status = {name: {} for name in axes.RESIDUALS}  # keyed by str(layer) for json
+    pt_status = {name: {} for name in axes.RESIDUALS}  # keyed by int layer, inside residuals.pt
     for i, layer in enumerate(layers):
         for emotion in sorted({emo for emo, _, _ in axes.RESIDUALS.values()}):
             fit_set = next(fs for emo, fs, _ in axes.RESIDUALS.values() if emo == emotion)
@@ -33,11 +35,11 @@ def run(vectors_path: Path, out: Path) -> None:
             res = axes.residual_vectors(emotion, vec["unit"][emotion][i].double().numpy(), fit)
             for name, r in res.items():
                 if r is None:
-                    status[name][str(layer)] = "untestable"
+                    status[name][str(layer)] = pt_status[name][layer] = "untestable"
                 else:
                     unit_out[name][i] = torch.tensor(r, dtype=torch.float32)
-                    status[name][str(layer)] = "ok"
-    torch.save({"layers": layers, "unit": unit_out}, out / "residuals.pt")
+                    status[name][str(layer)] = pt_status[name][layer] = "ok"
+    torch.save({"layers": layers, "unit": unit_out, "status": pt_status}, out / "residuals.pt")
     meta["residuals"] = status
     (out / "axes.json").write_text(json.dumps(meta, indent=2), encoding="utf-8", newline="\n")
     for name, st in status.items():
