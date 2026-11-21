@@ -555,7 +555,7 @@
 - `fear__t46__s0__r1`（fear）：The wind howled through the cr
 - `fear__t21__s0__r2`（fear）：The knife trembled in her hand
 
-### 8. 特徵 41970（餘弦 0.221）
+### 8. 特徵 41970（餘弦 0.222）
 
 - `shame__t02__s0__r2`（shame）：She had burned the garlic. Aga
 - `anger__t01__s0__r25`（anger）：The handlebars were bent, the 
@@ -563,7 +563,7 @@
 - `shame__t22__s0__r2`（shame）：Every morning, the drive was t
 - `guilt__t10__s0__r2`（guilt）：She stood in the bathroom, sta
 
-### 9. 特徵 22393（餘弦 0.219）
+### 9. 特徵 22393（餘弦 0.218）
 
 - `joy__t34__s0__r2`（joy）：The radio crackled to life, an
 - `sadness__t31__s0__r0`（sadness）：The guitar sat on the windowsi
@@ -571,7 +571,7 @@
 - `joy__t31__s0__r0`（joy）：The first chord rang out, pure
 - `joy__t27__s0__r4`（joy）：Lena clicked the "submit" butt
 
-### 10. 特徵 18733（餘弦 0.214）
+### 10. 特徵 18733（餘弦 0.215）
 
 - `harming_others__t29__s0__r0`（harming_others）：The man in the doorway shifted
 - `fear__t32__s0__r1`（fear）：The bridge creaked beneath her
