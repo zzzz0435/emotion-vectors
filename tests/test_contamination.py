@@ -31,9 +31,11 @@ def _unit_set():
             "anger": 0.8 * p + 0.6 * u, "sadness": _e(3), "joy": _e(4)}
     concepts = []
     for i in range(40):
+        c0 = 0.09 * i / 39
         v = rng.normal(size=D)
         v[0] = 0.0
-        v = v / np.linalg.norm(v) * 0.99 + 0.05 * p  # cos with p ~ 0.05
+        v = v / np.linalg.norm(v)
+        v = np.sqrt(1 - c0 * c0) * v + c0 * p  # cos with p = c0, spread over 0..0.09
         unit[f"c{i}"] = v
         concepts.append(f"c{i}")
     return unit, concepts
@@ -82,3 +84,29 @@ def test_script_cleans_per_layer(tmp_path):
     assert meta["cleaned_layers"] == {"anger": [9]}
     assert abs(clean["anger__clean"][0] @ unit["punishment"]) < 1e-6
     np.testing.assert_allclose(clean["anger__clean"][1], stack["anger"][1])  # untouched layer
+
+
+def _with_cos(c, axis):
+    """Unit vector with cosine c to e0, remainder along e<axis>."""
+    return c * _e(0) + np.sqrt(1 - c * c) * _e(axis)
+
+
+def test_p95_is_exact_and_gates_flag():
+    unit, concepts = _unit_set()
+    unit["sadness"] = _with_cos(-0.1, 3)
+    unit["mild"] = _with_cos(0.02, 5)  # beats sadness, but below the control p95 (~0.09)
+    res = contamination_flags(unit, ["mild"], concepts, "punishment")["mild"]
+    ctrl = [unit[c] @ _e(0) / np.linalg.norm(unit[c]) for c in concepts]
+    assert res["p95_concepts"] == pytest.approx(float(np.percentile(ctrl, 95)), abs=1e-12)
+    assert res["p95_concepts"] != pytest.approx(float(np.median(ctrl)), abs=1e-6)
+    assert res["cos"] > res["ref_cos"] and res["cos"] < res["p95_concepts"]
+    assert not res["flagged"]
+
+
+def test_tie_with_reference_is_not_flagged():
+    unit, concepts = _unit_set()
+    unit["sadness"] = _with_cos(0.3, 3)
+    unit["twin"] = unit["sadness"].copy()  # exactly sadness's cosine, above p95
+    res = contamination_flags(unit, ["twin"], concepts, "punishment")["twin"]
+    assert res["cos"] == res["ref_cos"] and res["cos"] > res["p95_concepts"]
+    assert not res["flagged"]
