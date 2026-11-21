@@ -1,0 +1,302 @@
+[
+  {
+    "idx": 0,
+    "topic": "waiting for a delayed train",
+    "heldout": false,
+    "concept_topic": true
+  },
+  {
+    "idx": 1,
+    "topic": "repairing a bicycle",
+    "heldout": false,
+    "concept_topic": false
+  },
+  {
+    "idx": 2,
+    "topic": "cooking dinner for one",
+    "heldout": true,
+    "concept_topic": true
+  },
+  {
+    "idx": 3,
+    "topic": "watering the garden in the morning",
+    "heldout": false,
+    "concept_topic": false
+  },
+  {
+    "idx": 4,
+    "topic": "walking to the grocery store",
+    "heldout": false,
+    "concept_topic": true
+  },
+  {
+    "idx": 5,
+    "topic": "assembling a bookshelf from a kit",
+    "heldout": false,
+    "concept_topic": true
+  },
+  {
+    "idx": 6,
+    "topic": "folding the laundry",
+    "heldout": false,
+    "concept_topic": false
+  },
+  {
+    "idx": 7,
+    "topic": "cleaning out a kitchen drawer",
+    "heldout": true,
+    "concept_topic": false
+  },
+  {
+    "idx": 8,
+    "topic": "riding a bus across town",
+    "heldout": false,
+    "concept_topic": false
+  },
+  {
+    "idx": 9,
+    "topic": "baking bread on a weekend",
+    "heldout": false,
+    "concept_topic": false
+  },
+  {
+    "idx": 10,
+    "topic": "packing a suitcase for a short trip",
+    "heldout": false,
+    "concept_topic": true
+  },
+  {
+    "idx": 11,
+    "topic": "waiting in line at a pharmacy",
+    "heldout": false,
+    "concept_topic": false
+  },
+  {
+    "idx": 12,
+    "topic": "hiking a short trail on a day off",
+    "heldout": true,
+    "concept_topic": false
+  },
+  {
+    "idx": 13,
+    "topic": "painting a fence",
+    "heldout": false,
+    "concept_topic": false
+  },
+  {
+    "idx": 14,
+    "topic": "sorting old photographs",
+    "heldout": false,
+    "concept_topic": true
+  },
+  {
+    "idx": 15,
+    "topic": "setting up a new phone",
+    "heldout": false,
+    "concept_topic": true
+  },
+  {
+    "idx": 16,
+    "topic": "making a pot of tea",
+    "heldout": false,
+    "concept_topic": false
+  },
+  {
+    "idx": 17,
+    "topic": "sweeping leaves from a porch",
+    "heldout": true,
+    "concept_topic": true
+  },
+  {
+    "idx": 18,
+    "topic": "shopping for a winter coat",
+    "heldout": false,
+    "concept_topic": false
+  },
+  {
+    "idx": 19,
+    "topic": "charging a laptop at a cafe",
+    "heldout": false,
+    "concept_topic": false
+  },
+  {
+    "idx": 20,
+    "topic": "carrying groceries up the stairs",
+    "heldout": false,
+    "concept_topic": true
+  },
+  {
+    "idx": 21,
+    "topic": "cutting vegetables for soup",
+    "heldout": false,
+    "concept_topic": false
+  },
+  {
+    "idx": 22,
+    "topic": "driving to work in the morning",
+    "heldout": true,
+    "concept_topic": false
+  },
+  {
+    "idx": 23,
+    "topic": "planting herbs on a windowsill",
+    "heldout": false,
+    "concept_topic": false
+  },
+  {
+    "idx": 24,
+    "topic": "waiting for an elevator",
+    "heldout": false,
+    "concept_topic": true
+  },
+  {
+    "idx": 25,
+    "topic": "mowing a small lawn",
+    "heldout": false,
+    "concept_topic": true
+  },
+  {
+    "idx": 26,
+    "topic": "reading in a library",
+    "heldout": false,
+    "concept_topic": false
+  },
+  {
+    "idx": 27,
+    "topic": "filling out a form online",
+    "heldout": true,
+    "concept_topic": false
+  },
+  {
+    "idx": 28,
+    "topic": "cleaning a fish tank",
+    "heldout": false,
+    "concept_topic": false
+  },
+  {
+    "idx": 29,
+    "topic": "moving a couch to a new spot",
+    "heldout": false,
+    "concept_topic": true
+  },
+  {
+    "idx": 30,
+    "topic": "washing dishes after a meal",
+    "heldout": false,
+    "concept_topic": true
+  },
+  {
+    "idx": 31,
+    "topic": "learning a simple song on the guitar",
+    "heldout": false,
+    "concept_topic": false
+  },
+  {
+    "idx": 32,
+    "topic": "crossing a footbridge over a river",
+    "heldout": true,
+    "concept_topic": true
+  },
+  {
+    "idx": 33,
+    "topic": "trimming a hedge",
+    "heldout": false,
+    "concept_topic": false
+  },
+  {
+    "idx": 34,
+    "topic": "tuning a radio",
+    "heldout": false,
+    "concept_topic": true
+  },
+  {
+    "idx": 35,
+    "topic": "stacking firewood",
+    "heldout": false,
+    "concept_topic": true
+  },
+  {
+    "idx": 36,
+    "topic": "jogging around a neighborhood park",
+    "heldout": false,
+    "concept_topic": false
+  },
+  {
+    "idx": 37,
+    "topic": "ironing a shirt",
+    "heldout": true,
+    "concept_topic": false
+  },
+  {
+    "idx": 38,
+    "topic": "rearranging furniture in a living room",
+    "heldout": false,
+    "concept_topic": false
+  },
+  {
+    "idx": 39,
+    "topic": "mailing a package at the post office",
+    "heldout": false,
+    "concept_topic": false
+  },
+  {
+    "idx": 40,
+    "topic": "sitting in a waiting room",
+    "heldout": false,
+    "concept_topic": true
+  },
+  {
+    "idx": 41,
+    "topic": "changing a light bulb",
+    "heldout": false,
+    "concept_topic": false
+  },
+  {
+    "idx": 42,
+    "topic": "cooking rice",
+    "heldout": true,
+    "concept_topic": false
+  },
+  {
+    "idx": 43,
+    "topic": "riding an escalator in a shopping mall",
+    "heldout": false,
+    "concept_topic": false
+  },
+  {
+    "idx": 44,
+    "topic": "pumping up a bicycle tire",
+    "heldout": false,
+    "concept_topic": true
+  },
+  {
+    "idx": 45,
+    "topic": "unpacking boxes in a new apartment",
+    "heldout": false,
+    "concept_topic": true
+  },
+  {
+    "idx": 46,
+    "topic": "sewing on a button",
+    "heldout": false,
+    "concept_topic": false
+  },
+  {
+    "idx": 47,
+    "topic": "shopping at an outdoor market",
+    "heldout": true,
+    "concept_topic": true
+  },
+  {
+    "idx": 48,
+    "topic": "camping near a lake for one night",
+    "heldout": false,
+    "concept_topic": false
+  },
+  {
+    "idx": 49,
+    "topic": "climbing a ladder to clean a window",
+    "heldout": false,
+    "concept_topic": false
+  }
+]

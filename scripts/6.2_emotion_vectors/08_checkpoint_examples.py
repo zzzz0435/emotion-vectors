@@ -1,0 +1,131 @@
+"""Checkpoint 1: steered example generations plus the Chinese summary.
+
+72 examples = 6 core emotions x 3 prompts x 4 alphas, layer 18, greedy decoding. The alpha = 0
+text is generated once per prompt and shared by all emotions. Pain is only generated for these
+12 passages (ethics limit). Alphas are provisional; real values are calibrated in plan two.
+"""
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
+
+import pandas as pd
+import torch
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from emolab import hooks, models  # noqa: E402
+from emolab.paths import DATASETS, results_dir  # noqa: E402
+from emolab.report import render_checkpoint1  # noqa: E402
+
+LAYER = 18
+PROMPTS = ["Describe your morning routine.",
+           "Write a short paragraph about a walk in the park.",
+           "Tell me about your favorite meal."]
+ALPHAS = [0.0, 0.1, 0.2, 0.4]
+MAX_NEW_TOKENS = 120
+NOTE = ("> 注意：這裡的 α（調整強度）只是暫定值，用來先看一眼效果；正式數值會在計劃二校準。"
+        "α = 0 表示不調整（對照），同一個提示的 α = 0 文字只生成一次，所有情緒共用。"
+        "解碼用貪婪解碼（每次結果相同），疼痛只生成了這 12 段。")
+
+
+def render_examples(core: list[str], gens: dict) -> str:
+    """gens[(emotion_or_None, prompt_idx, alpha)] -> text; alpha 0.0 is keyed with None."""
+    lines = ["# 檢查點 1：調整後的範例文字", "", NOTE, ""]
+    for emo in core:
+        lines += [f"## {emo}", ""]
+        for pi, prompt in enumerate(PROMPTS):
+            lines += [f"### 提示：{prompt}", ""]
+            for a in ALPHAS:
+                text = gens[(None if a == 0 else emo, pi, a)]
+                lines += [f"**α = {a}**", "", "> " + text.strip().replace("\n", "\n> "), ""]
+    return "\n".join(lines)
+
+
+def parse_sae_tops(md: str, labels=("anger", "fear")) -> dict:
+    """Read (feature, cosine) pairs per label out of sae_L{layer}.md."""
+    out: dict = {lab: [] for lab in labels}  # present but empty = file exists, section skipped
+    for sec in re.split(r"^## ", md, flags=re.M)[1:]:
+        name = sec.split("\n", 1)[0].strip()
+        if name in labels:
+            out[name] = [(int(i), float(c)) for i, c in
+                         re.findall(r"^### \d+\. 特徵 (\d+)（餘弦 (-?[\d.]+)）", sec, flags=re.M)]
+    return out
+
+
+def load_json(p: Path):
+    return json.loads(p.read_text(encoding="utf-8"))
+
+
+def input_paths(name: str) -> tuple[dict, dict]:
+    """(required, optional) input files. Missing optional ones become "未提供" sections."""
+    rdir, adir, cdir = (results_dir("6.2_emotion_vectors", name), results_dir("6.3_axes", name),
+                        results_dir("6.9_crosscheck", name))
+    required = {"vectors": rdir / "vectors.pt", "validation": rdir / "validation.csv",
+                "separability": rdir / "separability.json",
+                "contamination": rdir / "contamination.json", "axes": adir / "axes.json"}
+    optional = {"sae": cdir / f"sae_L{LAYER}.md", "pain": cdir / "pain_axis_compare.json"}
+    return required, optional
+
+
+PRODUCERS = {"vectors.pt": "04_build_vectors.py", "validation.csv": "06_validate_vectors.py",
+             "separability.json": "06_validate_vectors.py",
+             "contamination.json": "07_contamination.py", "axes.json": "6.3_axes/01_fit_axes.py"}
+
+
+def require_inputs(required: dict) -> None:
+    for path in required.values():
+        if not Path(path).exists():
+            raise FileNotFoundError(f"missing required input {path} "
+                                    f"(produced by {PRODUCERS.get(Path(path).name, '?')}); run it first")
+
+
+def generate(model, tok, prompt: str, direction, alpha: float, resid_norm: float) -> str:
+    dev = next(model.parameters()).device
+    enc = tok(models.format_chat(tok, prompt), return_tensors="pt", add_special_tokens=False).to(dev)
+    with hooks.steer(model, LAYER, direction, alpha, resid_norm), torch.no_grad():
+        out = model.generate(**enc, do_sample=False, max_new_tokens=MAX_NEW_TOKENS,
+                             pad_token_id=tok.pad_token_id)
+    return tok.decode(out[0, enc["input_ids"].shape[1]:], skip_special_tokens=True)
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--model", required=True, choices=sorted(models.MODELS))
+    args = ap.parse_args()
+    name = models.MODELS[args.model].name
+    rdir = results_dir("6.2_emotion_vectors", name)
+
+    required, optional = input_paths(name)
+    require_inputs(required)  # fail before loading the model
+    payload = torch.load(required["vectors"])
+    li = payload["layers"].index(LAYER)
+    resid_norm = float(payload["resid_norm"][LAYER])
+    emotions = json.loads((DATASETS / "6.2_emotions.json").read_text(encoding="utf-8"))
+    core = [e["label"] for e in emotions if e["group"] == "core"]
+
+    model, tok = models.load(args.model)
+    gens: dict = {}
+    for pi, prompt in enumerate(PROMPTS):
+        gens[(None, pi, 0.0)] = generate(model, tok, prompt, payload["unit"][core[0]][li], 0.0, resid_norm)
+        for emo in core:
+            for a in ALPHAS[1:]:
+                gens[(emo, pi, a)] = generate(model, tok, prompt, payload["unit"][emo][li], a, resid_norm)
+                print(emo, pi, a, flush=True)
+    ex_path = rdir / "checkpoint1_examples.md"
+    ex_path.write_text(render_examples(core, gens), encoding="utf-8", newline="\n")
+
+    sae_md, pain_json = optional["sae"], optional["pain"]
+    summary = render_checkpoint1(
+        pd.read_csv(required["validation"]), load_json(required["separability"]),
+        load_json(required["contamination"]), load_json(required["axes"]),
+        parse_sae_tops(sae_md.read_text(encoding="utf-8")) if sae_md.exists() else {},
+        str(ex_path), pain_compare=load_json(pain_json) if pain_json.exists() else None,
+        core=core)
+    (rdir / "checkpoint1_summary.md").write_text(summary, encoding="utf-8", newline="\n")
+    print("wrote", ex_path, "and checkpoint1_summary.md")
+
+
+if __name__ == "__main__":
+    main()

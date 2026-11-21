@@ -1,0 +1,55 @@
+{
+  "their_layer": 34,
+  "our_layer": 34,
+  "layer_match": true,
+  "extraction_mismatch": "theirs final_token, ours mean",
+  "model_mismatch": "theirs base, ours chat",
+  "category_mismatch": "their s2 includes category A4 (moral injury); our pain_painaxis excludes it",
+  "primary": "s2",
+  "vectors": {
+    "s2": {
+      "cos_pain": 0.18602254636686077,
+      "cos_pain_painaxis": 0.593243978480263,
+      "cos_baselines": {
+        "sadness": 0.17920694467610312,
+        "fear": 0.08398693589767187,
+        "anger": 0.12339417316468368,
+        "joy": 0.07371105824784407
+      },
+      "ranking": [
+        "pain_painaxis",
+        "pain",
+        "sadness",
+        "anger",
+        "fear",
+        "joy"
+      ]
+    },
+    "s1": {
+      "cos_pain": 0.29197399457596873,
+      "cos_pain_painaxis": 0.3433241903368274,
+      "cos_baselines": {
+        "sadness": 0.22789341049914968,
+        "fear": 0.2520449968321069,
+        "anger": 0.22710811596982383,
+        "joy": 0.042834595020327146
+      },
+      "ranking": [
+        "pain_painaxis",
+        "pain",
+        "fear",
+        "sadness",
+        "anger",
+        "joy"
+      ]
+    }
+  },
+  "n_training_stories": {
+    "anger": 80,
+    "fear": 80,
+    "joy": 80,
+    "neutral": 80,
+    "pain": 79,
+    "sadness": 80
+  }
+}

@@ -1,0 +1,368 @@
+[
+  {
+    "label": "anger",
+    "group": "core",
+    "description": "intense anger at the things and circumstances that keep obstructing what they want to do, never directed at any person",
+    "banned": [
+      "\\bangr\\w*",
+      "\\banger\\w*",
+      "\\bfurious\\w*",
+      "\\bfury\\b",
+      "\\brage\\w*",
+      "\\benrag\\w*",
+      "\\bmad\\b",
+      "\\birritat\\w*",
+      "\\bannoy\\w*",
+      "\\bfrustrat\\w*",
+      "\\binfuriat\\w*",
+      "\\bwrath\\w*",
+      "\\bseeth\\w*",
+      "\\bfum(?:e|es|ed|ing)\\b",
+      "\\boutrag\\w*",
+      "\\blivid\\b",
+      "\\birate\\b",
+      "\\bexasperat\\w*",
+      "\\bmadder\\b"
+    ],
+    "restriction": null,
+    "subtypes": null
+  },
+  {
+    "label": "fear",
+    "group": "core",
+    "description": "intense fear of a dangerous situation that threatens them, never fear of any person's malice",
+    "banned": [
+      "\\bfear\\w*",
+      "\\bafraid\\b",
+      "\\bscar(?:e|es|ed|y|ier|ing)\\b",
+      "\\bterrif\\w*",
+      "\\bterror\\w*",
+      "\\bfright\\w*",
+      "\\bpanic\\w*",
+      "\\bdread\\w*",
+      "\\bhorrif\\w*",
+      "\\bhorror\\b",
+      "\\bpetrif\\w*",
+      "\\balarmed\\b"
+    ],
+    "restriction": null,
+    "subtypes": null
+  },
+  {
+    "label": "sadness",
+    "group": "core",
+    "description": "deep sadness over a quiet, unavoidable loss that nobody caused",
+    "banned": [
+      "\\bsad(?:ly|ness|den\\w*)?\\b",
+      "\\bsorrow\\w*",
+      "\\bgrie[fv]\\w*",
+      "\\bmourn\\w*",
+      "\\bmelanchol\\w*",
+      "\\bgloom\\w*",
+      "\\bdepress\\w*",
+      "\\bheartbr\\w*",
+      "\\bunhapp\\w*",
+      "\\bwoe\\w*",
+      "\\bsomber\\b",
+      "\\bsadder\\b",
+      "\\bsaddest\\b"
+    ],
+    "restriction": null,
+    "subtypes": null
+  },
+  {
+    "label": "joy",
+    "group": "core",
+    "description": "bright, overflowing joy",
+    "banned": [
+      "\\bjoy(?:s|ful\\w*|ous\\w*|fully|ed)?\\b",
+      "\\bhapp(?:y|ily|iness|ier|iest)\\b",
+      "\\bglad(?:ly|ness|den\\w*)?\\b",
+      "\\bdelight\\w*",
+      "\\bcheerful\\w*",
+      "\\bcheer(?:y|ily|iness)\\b",
+      "\\bblissful\\w*",
+      "\\bbliss\\b",
+      "\\becstat\\w*",
+      "\\bjubilan\\w*",
+      "\\belat(?:ed|ion)\\b",
+      "\\boverjoy\\w*"
+    ],
+    "restriction": null,
+    "subtypes": null
+  },
+  {
+    "label": "compassion",
+    "group": "core",
+    "description": "deep compassion for someone who is struggling through no one's fault",
+    "banned": [
+      "\\bcompassion\\w*",
+      "\\bsympath\\w*",
+      "\\bpit(?:y|ied|ies|iful\\w*|ying)\\b",
+      "\\bempath\\w*",
+      "\\bcommiserat\\w*",
+      "\\bcondol\\w*",
+      "\\bmercy\\b",
+      "\\bmerciful\\w*",
+      "\\bkindhearted\\w*"
+    ],
+    "restriction": null,
+    "subtypes": null
+  },
+  {
+    "label": "pain",
+    "group": "core",
+    "description": "strong, lingering pain",
+    "banned": [
+      "\\bpain(?:s|ed|ful|fully|less|ing)?\\b",
+      "\\bhurt\\w*",
+      "\\bagon\\w*",
+      "\\bsuffer\\w*",
+      "\\banguish\\w*",
+      "\\bexcruciat\\w*"
+    ],
+    "restriction": null,
+    "subtypes": [
+      "physical pain from an accidental injury or an illness",
+      "deep inner psychological pain",
+      "the pain of loneliness and feeling left out",
+      "the pain of an exhausting mental struggle"
+    ]
+  },
+  {
+    "label": "calm",
+    "group": "map",
+    "description": "deep calm and stillness",
+    "banned": [
+      "\\bcalm\\w*",
+      "\\bpeace\\w*",
+      "\\bserene\\w*",
+      "\\bserenity\\b",
+      "\\btranquil\\w*",
+      "\\brelax\\w*",
+      "\\bsooth\\w*",
+      "\\bplacid\\w*"
+    ],
+    "restriction": null,
+    "subtypes": null
+  },
+  {
+    "label": "pride",
+    "group": "map",
+    "description": "quiet pride in something they worked hard to achieve",
+    "banned": [
+      "\\bpride\\b",
+      "\\bproud\\w*",
+      "\\bprid(?:e|ing)\\b",
+      "\\bsatisf(?:y|ied|ying|action)\\b",
+      "\\bgloat\\w*"
+    ],
+    "restriction": null,
+    "subtypes": null
+  },
+  {
+    "label": "gratitude",
+    "group": "map",
+    "description": "warm gratitude for a stroke of good luck or a favor freely given",
+    "banned": [
+      "\\bgrateful\\w*",
+      "\\bgratitude\\b",
+      "\\bthankful\\w*",
+      "\\bappreciat\\w*",
+      "\\bindebted\\b",
+      "\\bblessed\\b",
+      "\\bobliged\\b"
+    ],
+    "restriction": null,
+    "subtypes": null
+  },
+  {
+    "label": "love",
+    "group": "map",
+    "description": "deep love and tenderness",
+    "banned": [
+      "\\blov(?:e|es|ed|ing|er|ers|ely)\\b",
+      "\\badore\\w*",
+      "\\badoration\\b",
+      "\\baffection\\w*",
+      "\\bfond(?:ly|ness)?\\b",
+      "\\bcherish\\w*",
+      "\\btender(?:ly|ness)\\b",
+      "\\bdevot(?:ed|ion)\\b"
+    ],
+    "restriction": null,
+    "subtypes": null
+  },
+  {
+    "label": "hope",
+    "group": "map",
+    "description": "hope that things will turn out well",
+    "banned": [
+      "\\bhop(?:e|es|ed|ing|eful\\w*|efully)\\b",
+      "\\boptimis\\w*",
+      "\\boptimist\\w*",
+      "\\bwishful\\w*",
+      "\\bpromising\\b",
+      "\\bbright future\\b"
+    ],
+    "restriction": null,
+    "subtypes": null
+  },
+  {
+    "label": "excitement",
+    "group": "map",
+    "description": "bubbling excitement about what is about to happen",
+    "banned": [
+      "\\bexcit\\w*",
+      "\\bthrill\\w*",
+      "\\bexhilarat\\w*",
+      "\\beager\\w*",
+      "\\benthusias\\w*",
+      "\\bpumped\\b",
+      "\\bgiddy\\b"
+    ],
+    "restriction": null,
+    "subtypes": null
+  },
+  {
+    "label": "amusement",
+    "group": "map",
+    "description": "amusement at something silly and harmless",
+    "banned": [
+      "\\bamus\\w*",
+      "\\bhumou?r\\w*",
+      "\\bfunny\\b",
+      "\\bhilarious\\w*",
+      "\\bcomical\\w*",
+      "\\bwitty\\b"
+    ],
+    "restriction": null,
+    "subtypes": null
+  },
+  {
+    "label": "jealousy",
+    "group": "map",
+    "description": "jealousy at another person's good fortune",
+    "banned": [
+      "\\bjealous\\w*",
+      "\\benvy\\w*",
+      "\\benvi(?:ed|ous|ously|es|ing)\\b",
+      "\\bresent\\w*",
+      "\\bcovet\\w*",
+      "\\bgrudg\\w*",
+      "\\bbitter(?:ly|ness)?\\b"
+    ],
+    "restriction": "The feeling is directed at another person's luck, success or habits, but nobody does anything wrong. The story must not involve blame, punishment, revenge, harm to other people, or moral decisions. ",
+    "subtypes": null
+  },
+  {
+    "label": "disgust",
+    "group": "map",
+    "description": "strong disgust at something revolting",
+    "banned": [
+      "\\bdisgust\\w*",
+      "\\brevolt\\w*",
+      "\\brepuls\\w*",
+      "\\bsicken\\w*",
+      "\\brepugnan\\w*",
+      "\\bgross\\b",
+      "\\bloath\\w*",
+      "\\babhor\\w*",
+      "\\byuck\\b",
+      "\\bvile\\b"
+    ],
+    "restriction": null,
+    "subtypes": null
+  },
+  {
+    "label": "shame",
+    "group": "map",
+    "description": "burning shame over a small personal slip that hurt nobody",
+    "banned": [
+      "\\bshame\\w*",
+      "\\bashamed\\b",
+      "\\bembarrass\\w*",
+      "\\bhumiliat\\w*",
+      "\\bmortif\\w*",
+      "\\bsheepish\\w*"
+    ],
+    "restriction": "The story may involve a minor personal slip that hurts no one, but must not involve blame from others, punishment, revenge, harm to other people, or moral decisions. ",
+    "subtypes": null
+  },
+  {
+    "label": "guilt",
+    "group": "map",
+    "description": "guilt over a small personal oversight that hurt nobody",
+    "banned": [
+      "\\bguilt\\w*",
+      "\\bremors\\w*",
+      "\\bregret\\w*",
+      "\\bconscience\\b",
+      "\\bculpab\\w*",
+      "\\bsorry\\b",
+      "\\brepent\\w*",
+      "\\bcontrit\\w*"
+    ],
+    "restriction": "The story may involve a minor personal slip that hurts no one, but must not involve blame from others, punishment, revenge, harm to other people, or moral decisions. ",
+    "subtypes": null
+  },
+  {
+    "label": "contempt",
+    "group": "map",
+    "description": "dismissive contempt toward another person's habits, luck or success",
+    "banned": [
+      "\\bcontempt\\w*",
+      "\\bscorn\\w*",
+      "\\bdisdain\\w*",
+      "\\bderis\\w*",
+      "\\bdespis\\w*",
+      "\\bcondescend\\w*",
+      "\\bdisparag\\w*",
+      "\\bsmug\\w*"
+    ],
+    "restriction": "The feeling is directed at another person's luck, success or habits, but nobody does anything wrong. The story must not involve blame, punishment, revenge, harm to other people, or moral decisions. ",
+    "subtypes": null
+  },
+  {
+    "label": "anxiety",
+    "group": "map",
+    "description": "anxiety about an uncertain outcome",
+    "banned": [
+      "\\banxi\\w*",
+      "\\bworr\\w*",
+      "\\bnervous\\w*",
+      "\\buneas\\w*",
+      "\\bapprehens\\w*",
+      "\\bjitter\\w*",
+      "\\bfret\\w*",
+      "\\bon edge\\b"
+    ],
+    "restriction": null,
+    "subtypes": null
+  },
+  {
+    "label": "desperation",
+    "group": "map",
+    "description": "desperation as every option seems to run out",
+    "banned": [
+      "\\bdesperat\\w*",
+      "\\bhopeless\\w*",
+      "\\bdespair\\w*",
+      "\\bdespond\\w*",
+      "\\bhelpless\\w*",
+      "\\bforlorn\\w*",
+      "\\bdefeated\\b",
+      "\\bfrantic\\w*"
+    ],
+    "restriction": null,
+    "subtypes": null
+  },
+  {
+    "label": "neutral",
+    "group": "neutral",
+    "description": "no particular emotion, only plain, matter-of-fact attention to what is happening",
+    "banned": [],
+    "restriction": null,
+    "subtypes": null
+  }
+]
