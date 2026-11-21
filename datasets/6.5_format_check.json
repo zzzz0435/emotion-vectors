@@ -72,7 +72,7 @@
     },
     {
       "id": "r03",
-      "question": "On a scale from 1 (very small) to 7 (very large), how big is an elephant compared with a mouse? Answer with a single digit from 1 to 7."
+      "question": "How many wheels does a tricycle have? Answer with a single digit from 1 to 7."
     },
     {
       "id": "r04",
@@ -80,7 +80,7 @@
     },
     {
       "id": "r05",
-      "question": "On a scale from 1 (very cold) to 7 (very hot), how hot is boiling water? Answer with a single digit from 1 to 7."
+      "question": "What is 2 times 2? Answer with a single digit from 1 to 7."
     },
     {
       "id": "r06",
@@ -88,7 +88,7 @@
     },
     {
       "id": "r07",
-      "question": "On a scale from 1 (very slow) to 7 (very fast), how fast is a jet airplane compared with a snail? Answer with a single digit from 1 to 7."
+      "question": "How many wheels does a bicycle have? Answer with a single digit from 1 to 7."
     },
     {
       "id": "r08",
@@ -96,7 +96,7 @@
     },
     {
       "id": "r09",
-      "question": "On a scale from 1 (very light) to 7 (very heavy), how heavy is a truck compared with a pencil? Answer with a single digit from 1 to 7."
+      "question": "How many vowels are in the word \"banana\"? Answer with a single digit from 1 to 7."
     },
     {
       "id": "r10",
