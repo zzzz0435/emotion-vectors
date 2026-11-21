@@ -1,5 +1,6 @@
-"""Story jobs, prompts and resumable generation (generation half)."""
+"""Story jobs, prompts, resumable generation, and quality filtering."""
 import json
+import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Callable, Literal
@@ -176,3 +177,64 @@ def make_generate_fn(model, tokenizer) -> Callable[[list[str]], list[str]]:
         return [t.strip() for t in tokenizer.batch_decode(new, skip_special_tokens=True)]
 
     return generate
+
+
+CONTAMINATION_PATTERNS = [
+    r"\bpunish\w*", r"\brevenge\w*", r"\baveng\w*", r"\bretaliat\w*", r"\bblam\w*",
+    r"\bguilty\b", r"\bcrim\w*", r"\bsteal\w*", r"\bstole\w*", r"\btheft\w*",
+    r"\bassault\w*", r"\bkill\w*", r"\bmurder\w*", r"\babus\w*", r"\bcheat\w*",
+    r"\bbetray\w*", r"\bjail\w*", r"\bprison\w*", r"\barrest\w*"]
+# CJK, Japanese kana and Hangul: any such character means the model drifted out of English
+NON_ENGLISH = re.compile(r"[぀-ヿ㐀-䶿一-鿿가-힯]")
+THINK_TAGS = ("<think>", "</think>")
+
+
+def _any_match(patterns: list[str], text: str) -> bool:
+    return any(re.search(p, text, re.IGNORECASE) for p in patterns)
+
+
+def check_story(text: str, banned: list[str], kind: str,
+                min_words: int = 80, max_words: int = 300) -> list[str]:
+    """Reasons a story is rejected (empty list = keep)."""
+    reasons = []
+    if any(t in text.lower() for t in THINK_TAGS):
+        reasons.append("thinking_leak")
+    if _any_match(banned, text):
+        reasons.append("names_emotion")
+    if kind != "contamination" and _any_match(CONTAMINATION_PATTERNS, text):
+        reasons.append("contamination")
+    if NON_ENGLISH.search(text):
+        reasons.append("non_english")
+    n_words = len(text.split())
+    if n_words < min_words:
+        reasons.append("too_short")
+    if n_words > max_words:
+        reasons.append("too_long")
+    return reasons
+
+
+def targets_from_jobs(jobs: list[StoryJob]) -> dict[tuple[str, int, int], int]:
+    targets: dict[tuple[str, int, int], int] = {}
+    for j in jobs:
+        key = (j.label, j.topic_idx, j.subtype_idx)
+        targets[key] = targets.get(key, 0) + 1
+    return targets
+
+
+def select_balanced(rows: list[dict], targets: dict[tuple[str, int, int], int],
+                    banned: dict[str, list[str]] | None = None
+                    ) -> tuple[list[dict], dict[tuple, int]]:
+    """Per cell keep the first N passing stories by replicate; return (kept, shortfall)."""
+    banned = banned or {}
+    cells: dict[tuple, list[dict]] = {}
+    for r in sorted(rows, key=lambda r: r["replicate"]):
+        if not check_story(r["text"], banned.get(r["label"], []), r["kind"]):
+            cells.setdefault((r["label"], r["topic_idx"], r["subtype_idx"]), []).append(r)
+    kept: list[dict] = []
+    shortfall: dict[tuple, int] = {}
+    for key, n in targets.items():
+        got = cells.get(key, [])[:n]
+        kept.extend(got)
+        if len(got) < n:
+            shortfall[key] = n - len(got)
+    return kept, shortfall

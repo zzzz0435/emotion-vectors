@@ -17,7 +17,12 @@
       "\\binfuriat\\w*",
       "\\bwrath\\w*",
       "\\bseeth\\w*",
-      "\\bfum(?:e|es|ed|ing)\\b"
+      "\\bfum(?:e|es|ed|ing)\\b",
+      "\\boutrag\\w*",
+      "\\blivid\\b",
+      "\\birate\\b",
+      "\\bexasperat\\w*",
+      "\\bmadder\\b"
     ],
     "restriction": null,
     "subtypes": null
@@ -58,7 +63,11 @@
       "\\bheartbr\\w*",
       "\\bunhapp\\w*",
       "\\bwoe\\w*",
-      "\\bsomber\\b"
+      "\\bsomber\\b",
+      "\\bsadder\\b",
+      "\\bsaddest\\b",
+      "\\btearful\\w*",
+      "\\bweep\\w*"
     ],
     "restriction": null,
     "subtypes": null
@@ -77,7 +86,8 @@
       "\\bbliss\\b",
       "\\becstat\\w*",
       "\\bjubilan\\w*",
-      "\\belat(?:ed|ion)\\b"
+      "\\belat(?:ed|ion)\\b",
+      "\\boverjoy\\w*"
     ],
     "restriction": null,
     "subtypes": null

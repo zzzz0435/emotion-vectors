@@ -43,6 +43,21 @@ BANNED_CASES = {
 }
 
 
+EXTRA_FORMS = {
+    "anger": ["outrageous", "livid", "irate", "exasperated", "madder"],
+    "sadness": ["sadder", "saddest", "tearful", "weeping"],
+    "joy": ["overjoyed"],
+}
+
+
+def test_banned_extra_forms():
+    emotions = {x["label"]: x for x in load_json("6.2_emotions.json")}
+    for label, words in EXTRA_FORMS.items():
+        pats = [re.compile(p, re.IGNORECASE) for p in emotions[label]["banned"]]
+        for w in words:
+            assert any(p.search(f"It was {w}.") for p in pats), (label, w)
+
+
 def test_banned_regexes_compile_and_behave():
     emotions = {x["label"]: x for x in load_json("6.2_emotions.json")}
     for x in emotions.values():
