@@ -239,5 +239,12 @@ def test_get_residual_ok_and_untestable():
     assert np.allclose(ax.get_residual(payload, "a", 7), [3, 4, 5])
     with pytest.raises(ValueError, match="'a'.*layer 3"):
         ax.get_residual(payload, "a", 3)
-    with pytest.raises(ValueError, match="'b'"):
+    with pytest.raises(ValueError, match="'b'.*layer 7"):
         ax.get_residual(payload, "b", 7)
+
+
+def test_fit_axes_raises_when_excluded_label_missing_from_vad_only():
+    unit, df, _ = _planted_set()
+    df = df[df.label != "e0"]  # still in the vectors, gone from the ratings
+    with pytest.raises(ValueError, match="e0"):
+        fit_axes(unit, df, exclude={"e0", "e1"})

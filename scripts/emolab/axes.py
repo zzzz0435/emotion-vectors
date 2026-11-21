@@ -56,10 +56,10 @@ def fit_axes(unit: dict[str, np.ndarray], vad: pd.DataFrame, exclude: set[str]) 
     """Fit V, A, D axes on unit emotion vectors (labels in `exclude` or without a vector are
     skipped), then Gram-Schmidt V -> A -> D. loo_r / reliable come from each axis's own raw
     fit, before orthogonalisation."""
-    missing = sorted(set(exclude) - set(unit))
+    missing = sorted(set(exclude) - (set(unit) & set(vad["label"])))
     if missing:
-        raise ValueError(f"excluded labels absent from the vectors (fit set would silently "
-                         f"equal a larger one): {missing}")
+        raise ValueError(f"excluded labels absent from the vectors or the VAD frame (fit set "
+                         f"would silently equal a larger one): {missing}")
     rows = vad[vad["label"].isin(unit) & ~vad["label"].isin(exclude)]
     if len(rows) < MIN_FIT_EMOTIONS:
         raise ValueError(f"only {len(rows)} emotions left to fit (need >= {MIN_FIT_EMOTIONS})")
@@ -110,7 +110,7 @@ def get_residual(payload: dict, name: str, layer: int) -> np.ndarray:
     """Row of residuals.pt for an "ok" layer; ValueError if untestable or the name is missing."""
     status = payload.get("status", {}).get(name)
     if status is None or name not in payload["unit"]:
-        raise ValueError(f"residual {name!r} not found")
+        raise ValueError(f"residual {name!r} not found (layer {layer})")
     if status.get(layer) != "ok":
         raise ValueError(f"residual {name!r} is untestable at layer {layer} "
                          f"(status: {status.get(layer)!r})")
