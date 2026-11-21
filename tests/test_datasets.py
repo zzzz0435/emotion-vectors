@@ -65,11 +65,21 @@ NOT_BANNED = {
     "sadness": "Tears ran down her face.",
     "fear": "The alarm clock rang.",
 }
+NOT_BANNED_MORE = [
+    ("gratitude", "He thanked her."),
+    ("gratitude", "Thanks, she said."),
+    ("joy", "The crowd cheered."),
+]
 STILL_BANNED = {
     "amusement": "She felt amused.",
     "pain": "The pain grew.",
     "joy": "Joy filled her.",
 }
+STILL_BANNED_MORE = [
+    ("gratitude", "She felt thankful."),
+    ("joy", "She felt cheerful."),
+    ("fear", "She was alarmed."),
+]
 
 
 def test_banned_names_not_expressions():
@@ -78,6 +88,10 @@ def test_banned_names_not_expressions():
         return any(re.search(p, text, re.IGNORECASE) for p in emotions[label]["banned"])
     for label, text in NOT_BANNED.items():
         assert not hit(label, text), (label, text)
+    for label, text in NOT_BANNED_MORE:
+        assert not hit(label, text), (label, text)
+    for label, text in STILL_BANNED_MORE:
+        assert hit(label, text), (label, text)
     for label, text in STILL_BANNED.items():
         assert hit(label, text), (label, text)
 

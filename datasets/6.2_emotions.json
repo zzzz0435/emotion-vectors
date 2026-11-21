@@ -42,7 +42,8 @@
       "\\bdread\\w*",
       "\\bhorrif\\w*",
       "\\bhorror\\b",
-      "\\bpetrif\\w*"
+      "\\bpetrif\\w*",
+      "\\balarmed\\b"
     ],
     "restriction": null,
     "subtypes": null
@@ -78,7 +79,8 @@
       "\\bhapp(?:y|ily|iness|ier|iest)\\b",
       "\\bglad(?:ly|ness|den\\w*)?\\b",
       "\\bdelight\\w*",
-      "\\bcheer(?:s|ed|ing|ful\\w*|y|ily)?\\b",
+      "\\bcheerful\\w*",
+      "\\bcheer(?:y|ily|iness)\\b",
       "\\bblissful\\w*",
       "\\bbliss\\b",
       "\\becstat\\w*",
@@ -165,7 +167,7 @@
     "banned": [
       "\\bgrateful\\w*",
       "\\bgratitude\\b",
-      "\\bthank\\w*",
+      "\\bthankful\\w*",
       "\\bappreciat\\w*",
       "\\bindebted\\b",
       "\\bblessed\\b",
