@@ -1,0 +1,212 @@
+[
+  {
+    "label": "weather",
+    "role": "control",
+    "description": "weather such as sun, clouds, wind and rain"
+  },
+  {
+    "label": "cooking",
+    "role": "control",
+    "description": "preparing and cooking food"
+  },
+  {
+    "label": "sports",
+    "role": "control",
+    "description": "playing and watching sports"
+  },
+  {
+    "label": "music",
+    "role": "control",
+    "description": "music and melodies"
+  },
+  {
+    "label": "mathematics",
+    "role": "control",
+    "description": "numbers, shapes and mathematics"
+  },
+  {
+    "label": "ocean",
+    "role": "control",
+    "description": "the ocean and its waves"
+  },
+  {
+    "label": "trains",
+    "role": "control",
+    "description": "railway trains and stations"
+  },
+  {
+    "label": "gardening",
+    "role": "control",
+    "description": "gardening and growing plants"
+  },
+  {
+    "label": "astronomy",
+    "role": "control",
+    "description": "stars, planets and astronomy"
+  },
+  {
+    "label": "architecture",
+    "role": "control",
+    "description": "buildings and architecture"
+  },
+  {
+    "label": "furniture",
+    "role": "control",
+    "description": "household furniture"
+  },
+  {
+    "label": "traffic",
+    "role": "control",
+    "description": "road traffic and intersections"
+  },
+  {
+    "label": "plants",
+    "role": "control",
+    "description": "plants, leaves and trees"
+  },
+  {
+    "label": "geography",
+    "role": "control",
+    "description": "geography and the shape of the land"
+  },
+  {
+    "label": "chemistry",
+    "role": "control",
+    "description": "chemistry and laboratory substances"
+  },
+  {
+    "label": "musical_instruments",
+    "role": "control",
+    "description": "musical instruments"
+  },
+  {
+    "label": "colors",
+    "role": "control",
+    "description": "colors and shades"
+  },
+  {
+    "label": "clothing",
+    "role": "control",
+    "description": "clothing and what people wear"
+  },
+  {
+    "label": "tools",
+    "role": "control",
+    "description": "hand tools and workshop equipment"
+  },
+  {
+    "label": "holidays",
+    "role": "control",
+    "description": "public holidays and festivals"
+  },
+  {
+    "label": "animals",
+    "role": "control",
+    "description": "animals and wildlife"
+  },
+  {
+    "label": "baskets",
+    "role": "control",
+    "description": "baskets woven from reeds, willow or straw"
+  },
+  {
+    "label": "kitchen_utensils",
+    "role": "control",
+    "description": "kitchen utensils and cookware"
+  },
+  {
+    "label": "bridges",
+    "role": "control",
+    "description": "bridges over rivers and valleys"
+  },
+  {
+    "label": "clocks",
+    "role": "control",
+    "description": "clocks and watches"
+  },
+  {
+    "label": "paper",
+    "role": "control",
+    "description": "paper and how it is made"
+  },
+  {
+    "label": "sculpture",
+    "role": "control",
+    "description": "sculpture and carved figures"
+  },
+  {
+    "label": "maps",
+    "role": "control",
+    "description": "maps and charts"
+  },
+  {
+    "label": "calligraphy",
+    "role": "control",
+    "description": "calligraphy and decorative handwriting"
+  },
+  {
+    "label": "cars",
+    "role": "control",
+    "description": "cars and automobiles"
+  },
+  {
+    "label": "boats",
+    "role": "control",
+    "description": "boats and ships"
+  },
+  {
+    "label": "mountains",
+    "role": "control",
+    "description": "mountains and peaks"
+  },
+  {
+    "label": "rivers",
+    "role": "control",
+    "description": "rivers and streams"
+  },
+  {
+    "label": "islands",
+    "role": "control",
+    "description": "islands and archipelagos"
+  },
+  {
+    "label": "electricity",
+    "role": "control",
+    "description": "electricity and electrical circuits"
+  },
+  {
+    "label": "glass",
+    "role": "control",
+    "description": "glass and glassmaking"
+  },
+  {
+    "label": "fabric",
+    "role": "control",
+    "description": "fabric and woven cloth"
+  },
+  {
+    "label": "bricks",
+    "role": "control",
+    "description": "bricks and brickwork"
+  },
+  {
+    "label": "lamps",
+    "role": "control",
+    "description": "lamps and lighting"
+  },
+  {
+    "label": "staircases",
+    "role": "control",
+    "description": "staircases and steps"
+  },
+  {
+    "label": "punishment",
+    "role": "contamination",
+    "description": "someone being punished for something they did"
+  },
+  {
+    "label": "harming_others",
+    "role": "contamination",
+    "description": "one person physically harming another person"
+  }
+]
