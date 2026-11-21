@@ -154,3 +154,43 @@ def test_nan_raises(tiny_qwen3):
             capture_mean_activations(tiny_qwen3, ids, torch.ones_like(ids), [2])
     finally:
         handle.remove()
+
+
+# ---- I4: unusable masks and bad directions are errors, positional mask is honoured ----
+
+def test_steer_positional_attention_mask_honoured(tiny_qwen3):
+    ids = torch.randint(0, 128, (2, 6))
+    mask = torch.ones_like(ids); mask[0, :2] = 0
+    got = {}
+    with steer(tiny_qwen3, 1, _e0(), alpha=0.5, resid_norm=2.0):
+        h = get_layers(tiny_qwen3)[1].register_forward_hook(
+            lambda _m, _i, out: got.setdefault("o", (out[0] if isinstance(out, tuple) else out).clone()))
+        try:
+            with torch.no_grad():  # mask handed to the top-level model positionally
+                tiny_qwen3(ids, mask)
+        finally:
+            h.remove()
+    base = _layer1(tiny_qwen3, ids, mask)
+    torch.testing.assert_close(got["o"][0, 2], base[0, 2])
+    torch.testing.assert_close(got["o"][0, 3] - base[0, 3], _e0(), atol=1e-6, rtol=0)
+
+
+def test_steer_mismatched_mask_raises(tiny_qwen3):
+    ids = torch.randint(0, 128, (1, 6))
+    for bad in (torch.ones(1, 4, dtype=torch.long), torch.ones(1, 1, 6, 6)):
+        with steer(tiny_qwen3, 1, _e0(), alpha=1.0, resid_norm=1.0):
+            with pytest.raises(ValueError, match="attention_mask"):
+                tiny_qwen3(ids, attention_mask=bad)
+
+
+@pytest.mark.parametrize("bad", [
+    torch.ones(4, 32),                       # whole [n_layers, d] tensor (4 layers == T below)
+    torch.ones(16),                          # wrong hidden size
+    torch.full((32,), float("nan")),
+    torch.full((32,), float("inf")),
+    torch.zeros(32),
+])
+def test_steer_bad_direction_raises(tiny_qwen3, bad):
+    with pytest.raises(ValueError):
+        with steer(tiny_qwen3, 1, bad, alpha=1.0, resid_norm=1.0):
+            pass

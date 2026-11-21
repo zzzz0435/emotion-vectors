@@ -72,18 +72,29 @@ def steer(model, layer: int, direction: torch.Tensor, alpha: float, resid_norm: 
 
     Prefill (seq len > 1) skips the first non-padding position of each row;
     decode steps (seq len 1) always get the vector. No hook when alpha == 0.
-    The attention mask is learned via a pre-hook on the top-level model.
+    The attention mask is learned via a pre-hook on the top-level model (keyword or second
+    positional argument). During prefill a mask that is present but unusable (not 2-D, or
+    length != T) raises ValueError; only a missing mask (None) means "position 0 is first".
+    `direction` must be 1-D of hidden size, finite, with nonzero norm (else ValueError).
     """
     if alpha == 0:
         yield
         return
     unit = direction.detach().float()
+    hidden = model.get_input_embeddings().weight.shape[1]
+    if unit.ndim != 1 or unit.shape[0] != hidden:
+        raise ValueError(f"direction must have shape [{hidden}], got {tuple(unit.shape)}")
+    if not torch.isfinite(unit).all() or unit.norm() == 0:
+        raise ValueError("direction must be finite and nonzero")
     vec = alpha * resid_norm * unit / unit.norm()
     state: dict = {"mask": None}
     handles = []
 
-    def stash(_m, _args, kwargs):
-        state["mask"] = kwargs.get("attention_mask")
+    def stash(_m, args, kwargs):
+        mask = kwargs.get("attention_mask")
+        if mask is None and len(args) > 1:
+            mask = args[1]
+        state["mask"] = mask
 
     def hook(_m, _i, out):
         h = _out_tensor(out)
@@ -91,10 +102,13 @@ def steer(model, layer: int, direction: torch.Tensor, alpha: float, resid_norm: 
         T = h.shape[1]
         if T > 1:
             mask = state["mask"]
-            if mask is not None and mask.dim() == 2 and mask.shape[1] == T:
-                first = _first_real(mask.to(h.device))
-            else:  # no usable mask: position 0 is the first real token
+            if mask is None:  # no mask at all: position 0 is the first real token
                 first = torch.zeros(h.shape[0], dtype=torch.long, device=h.device)
+            elif mask.dim() == 2 and mask.shape[1] == T:
+                first = _first_real(mask.to(h.device))
+            else:
+                raise ValueError(f"steer: unusable attention_mask of shape {tuple(mask.shape)} "
+                                 f"for prefill length {T}; need a 2-D [B, T] mask")
             keep = torch.arange(T, device=h.device)[None, :] > first[:, None]
             add = add * keep.unsqueeze(-1).to(h.dtype)
         new = h + add
