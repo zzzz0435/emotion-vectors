@@ -1,0 +1,16 @@
+{
+  "gpu": "NVIDIA GeForce RTX 5060",
+  "vram_total_mb": 8123,
+  "torch": "2.11.0+cu128",
+  "cuda": "12.8",
+  "transformers": "5.23.0",
+  "bitsandbytes": "0.50.2",
+  "models": {
+    "qwen3-1.7b": {
+      "loaded": false,
+      "peak_vram_mb": 0.0,
+      "tokens_per_s": 0.0,
+      "error": "model loading not implemented yet (Task 2)"
+    }
+  }
+}
