@@ -2,7 +2,8 @@
 
 ## Pain-axis dataset (`6.2_pain_axis_3.1_pain_and_control_datasets.json`)
 - Source: https://github.com/valen-research/Pain-axis, commit 213fb6c89c96004dbe93d1704c636ad8c9d801f3, file `datasets/3.1_pain_and_control_datasets.json`.
-- License: MIT (Copyright (c) 2026 valen-research). Saved unchanged (byte-identical).
+- License: MIT (Copyright (c) 2026 valen-research). Saved unchanged (byte-identical). Full license text: `LICENSE-Pain-axis.txt` in this folder.
+- The ported `compute_pain_vector` logic in `scripts/emolab/vectors.py` (`pain_axis_vector`) is covered by the same license.
 
 ## NRC VAD Lexicon (`6.3_nrc_vad_emotions.csv`, git-ignored)
 - Version: NRC VAD Lexicon v2.1 (March 2025), Saif M. Mohammad, National Research Council Canada. Native scale -1 to 1.
