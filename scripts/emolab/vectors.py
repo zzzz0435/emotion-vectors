@@ -75,3 +75,50 @@ def separability(acts: np.ndarray, labels: np.ndarray, train_mask: np.ndarray,
     """Direction unit(mean_a - mean_b) from training rows; AUROC of a vs b on test rows."""
     d = diff_of_means(acts, labels, a, b, train_mask).astype(np.float64)
     return projection_auroc(acts, labels, d / np.linalg.norm(d), a, b, test_mask)
+
+
+def _unit(v: np.ndarray) -> np.ndarray:
+    v = np.asarray(v, dtype=np.float64)
+    return v / np.linalg.norm(v)
+
+
+def contamination_flags(unit: dict[str, np.ndarray], emotions: list[str], concepts: list[str],
+                        probe: str, reference: str = "sadness") -> dict[str, dict]:
+    """Flag emotion vectors that overlap with `probe` (a single layer; unit[label] is 1-D).
+
+    flagged  <=>  cos(emotion, probe) > cos(reference, probe)
+             and  cos(emotion, probe) > 95th percentile of the concepts' cos with probe.
+    """
+    p = _unit(unit[probe])
+    cos = lambda k: float(_unit(unit[k]) @ p)  # noqa: E731
+    ref_cos = cos(reference)
+    p95 = float(np.percentile([cos(c) for c in concepts], 95))
+    out = {}
+    for e in emotions:
+        c = cos(e)
+        out[e] = {"cos": c, "ref_cos": ref_cos, "p95_concepts": p95,
+                  "flagged": bool(c > ref_cos and c > p95)}
+    return out
+
+
+def remove_component(v: np.ndarray, probe: np.ndarray) -> np.ndarray:
+    """`v` with its component along `probe` removed, re-normalised to unit length."""
+    return remove_components(v, [probe])
+
+
+def remove_components(v: np.ndarray, probes: list[np.ndarray]) -> np.ndarray:
+    """Remove several probe components sequentially (each probe first orthogonalised
+    against the ones already removed), so the result is orthogonal to all of them."""
+    v = np.asarray(v, dtype=np.float64).copy()
+    basis: list[np.ndarray] = []
+    for pr in probes:
+        q = np.asarray(pr, dtype=np.float64).copy()
+        for b in basis:
+            q = q - (q @ b) * b
+        n = np.linalg.norm(q)
+        if n < 1e-12:  # probe lies in the span of earlier probes
+            continue
+        q = q / n
+        basis.append(q)
+        v = v - (v @ q) * q
+    return v / np.linalg.norm(v)
