@@ -40,7 +40,6 @@
       "\\bfright\\w*",
       "\\bpanic\\w*",
       "\\bdread\\w*",
-      "\\balarm\\w*",
       "\\bhorrif\\w*",
       "\\bhorror\\b",
       "\\bpetrif\\w*"
@@ -65,9 +64,7 @@
       "\\bwoe\\w*",
       "\\bsomber\\b",
       "\\bsadder\\b",
-      "\\bsaddest\\b",
-      "\\btearful\\w*",
-      "\\bweep\\w*"
+      "\\bsaddest\\b"
     ],
     "restriction": null,
     "subtypes": null
@@ -117,13 +114,9 @@
     "banned": [
       "\\bpain(?:s|ed|ful|fully|less|ing)?\\b",
       "\\bhurt\\w*",
-      "\\bach(?:e|es|ed|ing)\\b",
       "\\bagon\\w*",
       "\\bsuffer\\w*",
       "\\banguish\\w*",
-      "\\bsore(?:ness)?\\b",
-      "\\bthrob\\w*",
-      "\\bsting(?:s|ing)?\\b",
       "\\bexcruciat\\w*"
     ],
     "restriction": null,
@@ -160,8 +153,7 @@
       "\\bproud\\w*",
       "\\bprid(?:e|ing)\\b",
       "\\bsatisf(?:y|ied|ying|action)\\b",
-      "\\bgloat\\w*",
-      "\\bswell(?:ed|ing) with\\b"
+      "\\bgloat\\w*"
     ],
     "restriction": null,
     "subtypes": null
@@ -225,8 +217,7 @@
       "\\beager\\w*",
       "\\benthusias\\w*",
       "\\bpumped\\b",
-      "\\bgiddy\\b",
-      "\\bbuzzing\\b"
+      "\\bgiddy\\b"
     ],
     "restriction": null,
     "subtypes": null
@@ -240,9 +231,6 @@
       "\\bhumou?r\\w*",
       "\\bfunny\\b",
       "\\bhilarious\\w*",
-      "\\blaugh\\w*",
-      "\\bchuckl\\w*",
-      "\\bgiggl\\w*",
       "\\bcomical\\w*",
       "\\bwitty\\b"
     ],
@@ -273,7 +261,6 @@
       "\\bdisgust\\w*",
       "\\brevolt\\w*",
       "\\brepuls\\w*",
-      "\\bnause\\w*",
       "\\bsicken\\w*",
       "\\brepugnan\\w*",
       "\\bgross\\b",
@@ -295,8 +282,7 @@
       "\\bembarrass\\w*",
       "\\bhumiliat\\w*",
       "\\bmortif\\w*",
-      "\\bsheepish\\w*",
-      "\\bblush\\w*"
+      "\\bsheepish\\w*"
     ],
     "restriction": "The story may involve a minor personal slip that hurts no one, but must not involve blame from others, punishment, revenge, harm to other people, or moral decisions. ",
     "subtypes": null
@@ -327,7 +313,6 @@
       "\\bscorn\\w*",
       "\\bdisdain\\w*",
       "\\bderis\\w*",
-      "\\bsneer\\w*",
       "\\bdespis\\w*",
       "\\bcondescend\\w*",
       "\\bdisparag\\w*",

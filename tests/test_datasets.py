@@ -45,7 +45,7 @@ BANNED_CASES = {
 
 EXTRA_FORMS = {
     "anger": ["outrageous", "livid", "irate", "exasperated", "madder"],
-    "sadness": ["sadder", "saddest", "tearful", "weeping"],
+    "sadness": ["sadder", "saddest"],
     "joy": ["overjoyed"],
 }
 
@@ -56,6 +56,30 @@ def test_banned_extra_forms():
         pats = [re.compile(p, re.IGNORECASE) for p in emotions[label]["banned"]]
         for w in words:
             assert any(p.search(f"It was {w}.") for p in pats), (label, w)
+
+
+# expressions of a feeling are NOT banned; only its name/synonyms are
+NOT_BANNED = {
+    "amusement": "She laughed.",
+    "pain": "Her knee ached and throbbed.",
+    "sadness": "Tears ran down her face.",
+    "fear": "The alarm clock rang.",
+}
+STILL_BANNED = {
+    "amusement": "She felt amused.",
+    "pain": "The pain grew.",
+    "joy": "Joy filled her.",
+}
+
+
+def test_banned_names_not_expressions():
+    emotions = {x["label"]: x for x in load_json("6.2_emotions.json")}
+    def hit(label, text):
+        return any(re.search(p, text, re.IGNORECASE) for p in emotions[label]["banned"])
+    for label, text in NOT_BANNED.items():
+        assert not hit(label, text), (label, text)
+    for label, text in STILL_BANNED.items():
+        assert hit(label, text), (label, text)
 
 
 def test_banned_regexes_compile_and_behave():
