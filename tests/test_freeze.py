@@ -86,13 +86,23 @@ def test_coherent_max_stops_before_first_incoherent():
     assert freeze.coherent_max(m.iloc[::-1], 9, "anger") == 0.2   # row order irrelevant
 
 
-def test_coherent_max_zero_and_missing_larger_alpha():
+def test_coherent_max_zero_and_truncated_series():
     m = make_metrics({(9, "anger"): [(0.1, .5, False)],
                       (9, "fear"): [(0.1, .5, True), (0.2, .7, True)]})
     assert freeze.coherent_max(m, 9, "anger") == 0.0     # smallest alpha incoherent
-    assert freeze.coherent_max(m, 9, "fear") == 0.2      # larger alphas never generated
+    assert freeze.coherent_max(m, 9, "fear") == 0.2      # coherent_max alone takes the tail
     assert freeze.coherent_max(m, 9, "joy") == 0.0       # no rows at all
     assert freeze.coherent_max(m, 14, "fear") == 0.0
+    # ...but a series that stops while still coherent is an incomplete sweep: rejected
+    with pytest.raises(ValueError, match="layer 9 fear"):
+        freeze.validate_metrics(m, [9], ["anger", "fear"])
+
+
+def test_coherent_max_nan_flag_is_incoherent():
+    m = make_metrics({(9, "anger"): [(0.1, .5, True), (0.2, 1., True), (0.3, 1.5, True)]})
+    m["coherent"] = m["coherent"].astype(object)
+    m.loc[m["alpha"] == 0.2, "coherent"] = float("nan")
+    assert freeze.coherent_max(m, 9, "anger") == 0.1     # fail closed
 
 
 def test_coherent_max_reads_string_flags_from_csv(tmp_path):
@@ -100,6 +110,95 @@ def test_coherent_max_reads_string_flags_from_csv(tmp_path):
     m.to_csv(tmp_path / "metrics.csv", index=False)
     back = freeze.load_metrics(tmp_path / "metrics.csv")
     assert freeze.coherent_max(back, 9, "anger") == 0.1
+
+
+# ---------- validate_metrics ----------
+
+FULL = [(a, a, True) for a in GRID]                      # never incoherent: all 12 points
+
+
+def _valid_spec():
+    """Layers 9/14: early-stopped series (last row incoherent) and full series."""
+    spec = {}
+    for i, e in enumerate(CORE):
+        spec[(9, e)] = ramp(2.0, GRID[i])                # grid[:i+2], last incoherent
+        spec[(14, e)] = list(FULL)
+    spec[(9, "pain")] = list(FULL)
+    return spec
+
+
+def test_validate_metrics_accepts_early_stopped_and_full_series():
+    freeze.validate_metrics(make_metrics(_valid_spec()), [9, 14], CORE)
+    freeze.validate_metrics(make_metrics(_valid_spec()).iloc[::-1], [9, 14], CORE)
+
+
+def _bad(spec_fix, match, layers=(9, 14)):
+    spec = _valid_spec()
+    spec_fix(spec)
+    with pytest.raises(ValueError, match=match):
+        freeze.validate_metrics(make_metrics(spec), list(layers), CORE)
+
+
+def test_validate_metrics_truncated_tail():
+    _bad(lambda s: s.__setitem__((14, "joy"), FULL[:3]), "layer 14 joy")
+
+
+def test_validate_metrics_missing_middle():
+    _bad(lambda s: s.__setitem__((14, "joy"), FULL[:4] + FULL[5:]), r"layer 14 joy.*missing")
+
+
+def test_validate_metrics_off_grid_alpha():
+    _bad(lambda s: s[(14, "joy")].append((0.25, 0.25, True)), r"layer 14 joy.*off-grid")
+
+
+def test_validate_metrics_duplicate_rows():
+    _bad(lambda s: s[(14, "joy")].append(FULL[2]), r"layer 14 joy.*duplicate")
+
+
+def test_validate_metrics_missing_series_and_unexpected_layer():
+    _bad(lambda s: s.pop((14, "joy")), r"layer 14 joy")
+    _bad(lambda s: s.__setitem__((23, "joy"), list(FULL)), r"unexpected layers \[23\]")
+    _bad(lambda s: None, r"layer 18 anger", layers=(9, 14, 18))
+
+
+def test_validate_metrics_needs_alpha0_row():
+    m = make_metrics(_valid_spec())
+    m = m[~((m["layer"] == 9) & (m["label"] == "fear") & (m["alpha"] == 0.0))]
+    with pytest.raises(ValueError, match=r"layer 9 fear.*alpha = 0"):
+        freeze.validate_metrics(m, [9, 14], CORE)
+
+
+def test_validate_metrics_names_every_bad_series():
+    spec = _valid_spec()
+    spec[(14, "joy")] = FULL[:3]
+    spec[(9, "pain")] = FULL[:4] + FULL[5:]
+    with pytest.raises(ValueError) as ei:
+        freeze.validate_metrics(make_metrics(spec), [9, 14], CORE)
+    assert "layer 14 joy" in str(ei.value) and "layer 9 pain" in str(ei.value)
+
+
+@pytest.mark.parametrize("cell", ["", "nan", "maybe"])
+def test_validate_metrics_rejects_blank_or_invalid_coherent(tmp_path, cell):
+    m = make_metrics(_valid_spec())
+    m["coherent"] = m["coherent"].map(str)
+    m.loc[(m["layer"] == 14) & (m["label"] == "joy") & (m["alpha"] == 0.3), "coherent"] = cell
+    m.to_csv(tmp_path / "metrics.csv", index=False)
+    back = freeze.load_metrics(tmp_path / "metrics.csv")
+    with pytest.raises(ValueError, match=r"layer 14 joy.*coherent"):
+        freeze.validate_metrics(back, [9, 14], CORE)
+    assert freeze.coherent_max(back, 14, "joy") == 0.2       # fail closed
+
+
+def test_validate_metrics_catches_truncated_layer_that_flips_choice():
+    """Layer 23 cut off after 0.3 (all coherent) would silently lose to layer 14."""
+    spec = {**_uniform(14, 0.4, 3.0), **_uniform(23, 1.3, 2.0)}
+    m = make_metrics(spec)
+    assert freeze.choose_layer(m, contam()) == 23
+    cut = m[~((m["layer"] == 23) & (m["alpha"] > 0.3))]
+    assert freeze.choose_layer(cut, contam()) == 14           # what the guard prevents
+    freeze.validate_metrics(m, [14, 23], CORE)
+    with pytest.raises(ValueError, match="layer 23"):
+        freeze.validate_metrics(cut, [14, 23], CORE)
 
 
 def test_alpha_max_is_min_over_core():
@@ -153,6 +252,14 @@ def test_choose_layer_tie_uses_isclose():
     assert freeze.choose_layer(m, c) == 14
     m.loc[(m["layer"] == 9) & (m["alpha"] == 0.5), "gain"] += 1e-3
     assert freeze.choose_layer(m, c) == 9      # a real difference wins over flags
+
+
+def test_choose_layer_tie_tolerance_is_absolute_only():
+    """rel_tol = 0: at large gains a 5e-7 difference is not a tie (default rel_tol would be)."""
+    m = make_metrics({**_uniform(9, 0.5, 2000.0), **_uniform(14, 0.5, 2000.0)})
+    m.loc[(m["layer"] == 9) & (m["alpha"] == 0.5), "gain"] += 5e-7
+    c = contam({9: {"punishment": {"anger"}}})
+    assert freeze.choose_layer(m, c) == 9
 
 
 def test_choose_layer_raises_without_coherent_layer():
@@ -264,6 +371,20 @@ def test_induction_fallback_and_continue_walk():
     # nothing passes up to coherent_max (0.7) -> failed
     res = freeze.induction(m, pd.concat([ctrl, make_controls(0.7, 3.0)]), 9, AMAX, cm)
     assert res["anger"]["status"] == "failed" and res["anger"]["alpha"] is None
+
+
+def test_induction_nan_gain_never_requests_controls():
+    nan = float("nan")
+    pts = [(0.1, .1, True), (0.2, .2, True), (0.3, .3, True), (0.4, .5, True),
+           (0.5, nan, True), (0.6, nan, True), (0.7, nan, True), (0.8, 1.7, False)]
+    m, cm = _ind_metrics(anger=pts)
+    res = freeze.induction(m, make_controls(AMAX, 1.5), 9, AMAX, cm)
+    assert res["anger"]["status"] == "failed"
+    pts[5] = (0.6, 1.2, True)
+    m, cm = _ind_metrics(anger=pts)
+    with pytest.raises(freeze.NeedControls) as ei:
+        freeze.induction(m, make_controls(AMAX, 1.5), 9, AMAX, cm)
+    assert ei.value.alpha == 0.6                      # NaN at 0.5 skipped, not requested
 
 
 def test_pain_fallback_never_exceeds_its_coherent_max():
@@ -500,6 +621,78 @@ def test_render_checkpoint2_sections_and_wording():
         assert b not in md
 
 
+def _all_ok_frozen():
+    fz = json.loads(json.dumps(_payload()))
+    fz["induction"] = {e: "ok" for e in CORE}
+    fz["alpha_individual"] = {}
+    fz["alpha_eq"] = {e: 0.3 for e in CORE}
+    fz["contamination_at_layer"] = []
+    fz["residual_status_at_layer"] = {n: "ok" for n in axes_mod.RESIDUALS}
+    return fz
+
+
+def _hyps(frozen, pred):
+    labels = load_labels()
+    specs = stats._primary_specs(frozen, labels) + stats._secondary_specs(frozen, labels)
+    return {s["hypothesis"] for s in specs if pred(s)}
+
+
+@pytest.mark.parametrize("e", CORE)
+def test_hypothesis_maps_match_stats(e):
+    fz = _all_ok_frozen()
+    assert _hyps(fz, lambda s: s["reason"] == stats.R_FAILED) == set()
+    failed = {**fz, "induction": {**fz["induction"], e: "failed"},
+              "alpha_eq": {**fz["alpha_eq"], e: None}}
+    assert _hyps(failed, lambda s: s["reason"] == stats.R_FAILED) == set(freeze.HYP_IF_FAILED[e])
+    fb = {**fz, "induction": {**fz["induction"], e: "fallback"}, "alpha_individual": {e: 0.6}}
+    assert (_hyps(fb, lambda s: s.get("alpha_note") == stats.FALLBACK_NOTE)
+            == set(freeze.HYP_IF_FALLBACK.get(e, ())))
+    for h in (*freeze.HYP_IF_FAILED[e], *freeze.HYP_IF_FALLBACK.get(e, ())):
+        assert h in freeze.HYP_ZH
+
+
+def test_render_failed_anger_lists_every_affected_test():
+    fz = _all_ok_frozen()
+    fz["induction"]["anger"] = "failed"
+    fz["induction_detail"]["anger"] = {"status": "failed", "alpha": None, "gain": 0.2,
+                                       "rating": 1.2, "p95": 1.5}
+    fz["alpha_eq"]["anger"] = None
+    for e in CORE:
+        if e != "anger":
+            fz["induction_detail"][e] = {"status": "ok", "alpha": 0.4, "gain": 2.0,
+                                         "rating": 3.0, "p95": 1.5}
+    md = freeze.render_checkpoint2(fz, make_metrics(_uniform(18, 0.4, 4.0)), _texts(18, 0.4),
+                                   n_conditions=240)
+    note = next(ln for ln in md.splitlines() if ln.startswith("- **憤怒"))
+    for h in freeze.HYP_IF_FAILED["anger"]:
+        assert freeze.HYP_ZH[h] in note
+    assert "anger_resid2_vs_resid3" in freeze.HYP_IF_FAILED["anger"]
+
+
+def _contam_section(md):
+    return md.split("## 六、")[1].split("## 七、")[0]
+
+
+def test_render_contamination_core_vs_other_labels():
+    p = _payload(contamination=contam({18: {"punishment": {"anger", "disgust"}}}))
+    assert p["contamination_at_layer"] == ["anger", "disgust"]
+    names = {c.name for c in build_conditions(p, load_labels())}
+    assert any(n.startswith("anger__clean@") for n in names)          # core: clean run built
+    assert not any(n.startswith("disgust__clean") for n in names)     # other: no clean run
+    sec = _contam_section(freeze.render_checkpoint2(
+        p, make_metrics(_uniform(18, 0.4, 4.0)), _texts(18, 0.4), n_conditions=240))
+    core_line = next(ln for ln in sec.splitlines() if "anger" in ln)
+    other_line = next(ln for ln in sec.splitlines() if "disgust" in ln)
+    assert "disgust" not in core_line and "anger" not in other_line
+    assert "不另外" in other_line and "乾淨版" in other_line
+    assert "必須乾淨版也通過" in sec
+    # only a non-core label flagged: no core clean-version rule claimed
+    p = _payload(contamination=contam({18: {"punishment": {"disgust"}}}))
+    sec = _contam_section(freeze.render_checkpoint2(
+        p, make_metrics(_uniform(18, 0.4, 4.0)), _texts(18, 0.4), n_conditions=240))
+    assert "沒有核心情緒被標示" in sec and "必須乾淨版也通過" not in sec and "disgust" in sec
+
+
 # ---------- 03 / 04 end to end on synthetic files ----------
 
 def _tree(tmp_path, anger18=None):
@@ -521,7 +714,8 @@ def _tree(tmp_path, anger18=None):
         json.dumps(contam({18: {"punishment": {"anger"}}})), encoding="utf-8")
     (vec_dir / "separability.json").write_text(
         json.dumps({str(L): {"auroc": 0.98, "separable": True} for L in LAYERS}), encoding="utf-8")
-    torch.save({"resid_norm": {9: 54.7, 14: 74.2, 18: 94.3, 23: 197.0}}, vec_dir / "vectors.pt")
+    torch.save({"layers": LAYERS, "resid_norm": {9: 54.7, 14: 74.2, 18: 94.3, 23: 197.0}},
+               vec_dir / "vectors.pt")
     torch.save({"status": {n: {L: "ok" for L in LAYERS} for n in axes_mod.RESIDUALS}},
                ax_dir / "residuals.pt")
     (ax_dir / "axes.json").write_text(json.dumps({"fits": {
@@ -566,6 +760,18 @@ def test_03_phase1_exit3_when_controls_missing(tmp_path, capsys, fake_git):
     sel = json.loads((cal_dir / "selection.json").read_text(encoding="utf-8"))
     assert sel["layer"] == 18 and sel["alpha_max"] == 0.4
     assert not (cal_dir / "frozen_config.json").exists()
+
+
+def test_03_rejects_incomplete_metrics(tmp_path, fake_git):
+    res, cal_dir, repo = _tree(tmp_path)
+    path = cal_dir / "metrics.csv"
+    m = pd.read_csv(path)
+    m[~((m["layer"] == 23) & (m["alpha"] > 0.3))].to_csv(path, index=False, lineterminator="\n")
+    with pytest.raises(SystemExit) as ei:
+        _run03(res, repo)
+    msg = str(ei.value.code)
+    assert ei.value.code not in (0, 3, None) and "layer 23" in msg and "拒絕選層" in msg
+    assert not (cal_dir / "selection.json").exists()
 
 
 def test_03_control_layer_mismatch_is_an_error(tmp_path, fake_git):

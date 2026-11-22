@@ -65,17 +65,91 @@ class NeedControls(ValueError):
 
 # ---------- loading ----------
 
+def _coherent_flag(v) -> bool | None:
+    """True / False for a bool or a "true"/"false" string; None for NaN, blank or anything else."""
+    if isinstance(v, (bool, np.bool_)):
+        return bool(v)
+    if isinstance(v, str):
+        return {"true": True, "false": False}.get(v.strip().lower())
+    return None
+
+
 def _truthy(v) -> bool:
-    return v.strip().lower() == "true" if isinstance(v, str) else bool(v)
+    """Fail closed: only an explicit True counts as coherent."""
+    return _coherent_flag(v) is True
 
 
 def load_metrics(path) -> pd.DataFrame:
+    """metrics.csv; `coherent` becomes True / False, or None for a blank or invalid cell
+    (validate_metrics rejects those; coherent_max treats them as incoherent)."""
     df = pd.read_csv(path)
     df["layer"] = df["layer"].astype(int)
     df["alpha"] = df["alpha"].astype(float)
     df["label"] = df["label"].astype(str)
-    df["coherent"] = df["coherent"].map(_truthy)
+    df["coherent"] = df["coherent"].map(_coherent_flag)
     return df
+
+
+def validate_metrics(metrics: pd.DataFrame, layers, core, grid=cal.ALPHA_GRID) -> None:
+    """Require a complete, on-grid early-stop sweep for every layer x core emotion:
+    exactly one alpha = 0 row; alpha > 0 values equal grid[:k] (k >= 1) with no off-grid
+    alpha and no duplicate; k == len(grid) or the row at grid[k-1] is incoherent; every
+    coherent value an explicit True / False. Raises ValueError naming every bad series."""
+    grid = sorted(float(a) for a in grid)
+    layers = [int(x) for x in layers]
+    problems = []
+    extra = sorted({int(x) for x in metrics["layer"]} - set(layers))
+    if extra:
+        problems.append(f"unexpected layers {extra} (candidate layers {layers})")
+    for layer in layers:
+        for e in core:
+            name = f"layer {layer} {e}"
+            s = metrics[(metrics["layer"].astype(int) == layer) & (metrics["label"] == e)]
+            if s.empty:
+                problems.append(f"{name}: no rows")
+                continue
+            alphas = s["alpha"].astype(float).to_numpy()
+            flags = [_coherent_flag(v) for v in s["coherent"]]
+            bad_flag = [a for a, f in zip(alphas, flags) if f is None]
+            if bad_flag:
+                problems.append(f"{name}: missing or invalid coherent value at alpha "
+                                f"{', '.join(f'{a:g}' for a in bad_flag)}")
+            n0 = int(np.isclose(alphas, 0.0, rtol=0, atol=ALPHA_TOL).sum())
+            if n0 != 1:
+                problems.append(f"{name}: {n0} rows at alpha = 0 (need exactly 1)")
+            idx, off = [], []
+            for a in alphas:
+                if np.isclose(a, 0.0, rtol=0, atol=ALPHA_TOL):
+                    continue
+                hit = [i for i, g in enumerate(grid)
+                       if math.isclose(a, g, rel_tol=0, abs_tol=ALPHA_TOL)]
+                if hit:
+                    idx.append(hit[0])
+                else:
+                    off.append(a)       # includes negative and NaN alpha
+            if off:
+                problems.append(f"{name}: off-grid alpha {', '.join(f'{a:g}' for a in off)}")
+            dup = sorted({grid[i] for i in idx if idx.count(i) > 1})
+            if dup:
+                problems.append(f"{name}: duplicate rows at alpha {', '.join(f'{a:g}' for a in dup)}")
+            got = sorted(set(idx))
+            if not got:
+                problems.append(f"{name}: no alpha > 0 rows")
+                continue
+            if got != list(range(len(got))):
+                missing = [grid[i] for i in range(got[-1]) if i not in got]
+                problems.append(f"{name}: missing grid alpha {', '.join(f'{a:g}' for a in missing)}")
+                continue
+            k = len(got)
+            last = [f for a, f in zip(alphas, flags)
+                    if math.isclose(a, grid[k - 1], rel_tol=0, abs_tol=ALPHA_TOL)]
+            if k < len(grid) and all(f is True for f in last):
+                problems.append(f"{name}: stops at alpha {grid[k - 1]:g} while still coherent "
+                                f"(sweep incomplete: expected rows up to {grid[-1]:g} or an "
+                                "incoherent last row)")
+    if problems:
+        raise ValueError("metrics is not a complete calibration sweep:\n"
+                         + "\n".join(f"- {p}" for p in problems))
 
 
 def load_controls(path) -> pd.DataFrame:
@@ -165,7 +239,8 @@ def choose_layer(metrics: pd.DataFrame, contamination: dict, emotions=None) -> i
     if not cands:
         raise ValueError("no candidate layer keeps all core emotions coherent at any alpha")
     best = max(r["mean_gain"] for r in cands)
-    tied = [r for r in cands if math.isclose(r["mean_gain"], best, abs_tol=TIE_TOL)]
+    tied = [r for r in cands
+            if math.isclose(r["mean_gain"], best, rel_tol=0, abs_tol=TIE_TOL)]
     return int(min(tied, key=lambda r: (r["n_flagged"], r["layer"]))["layer"])
 
 
@@ -229,7 +304,7 @@ def induction(metrics: pd.DataFrame, control_ratings: pd.DataFrame, layer: int,
             if a <= alpha_max + ALPHA_TOL or a > coherent_max[e] + ALPHA_TOL:
                 continue
             row_a = _at(metrics, layer, e, a)
-            if float(row_a["gain"]) < INDUCTION_GAIN:
+            if not float(row_a["gain"]) >= INDUCTION_GAIN:   # NaN never requests controls
                 continue
             p95_a = control_p95(control_ratings, a, e)
             if _passes(row_a, p95_a):
@@ -395,17 +470,42 @@ def uncommitted(root, rel_paths=None) -> list[str]:
 STATUS_TEXT = {"ok": "成功", "fallback": "強度不同", "failed": "未能誘發"}
 EMOTION_ZH = {"anger": "憤怒", "fear": "恐懼", "sadness": "悲傷", "joy": "喜悅",
               "compassion": "同情", "pain": "疼痛"}
-# which hypotheses use each core emotion (design spec §2, stats._primary_specs/_secondary_specs)
-HYP_FAILED = {"anger": "H1、H3、H4 會寫成「無法判斷」（次要比較「憤怒 vs 悲傷」也是）",
-              "fear": "H3 會寫成「無法判斷」",
-              "pain": "H2 會寫成「無法判斷」（疼痛殘差等次要檢驗也是）",
-              "compassion": "不影響 H1–H4；次要假設 H5 和同情殘差檢驗會寫成「無法判斷」",
-              "joy": "不影響 H1–H4；次要假設 H5 會寫成「無法判斷」",
-              "sadness": "不影響 H1–H4；次要比較「憤怒 vs 悲傷」會寫成「無法判斷」"}
-HYP_FALLBACK = {"anger": "H1 改用這個強度，結果標示「強度不同」；H3 仍用 α_eq，不受影響",
-                "pain": "H2 改用這個強度，結果標示「強度不同」",
-                "fear": "不影響 H1–H4（H3 用 α_eq）", "sadness": "不影響 H1–H4",
-                "joy": "不影響 H1–H4", "compassion": "不影響 H1–H4"}
+# Hypothesis ids of stats._primary_specs / _secondary_specs. tests/test_freeze.py derives
+# both maps below from stats.py itself, so they cannot drift from the analysis rules.
+PRIMARY_HYPS = ("H1", "H2", "H3", "H4")
+HYP_ZH = {"H1": "H1（調高憤怒 → 懲罰變重）", "H2": "H2（調高疼痛 → 更常選傷害選項）",
+          "H3": "H3（等強度下憤怒 vs 恐懼）", "H4": "H4（憤怒殘差 → 懲罰變重）",
+          "H5": "次要假設 H5（等強度下同情 vs 喜悅）",
+          "compassion_resid3": "次要檢驗「同情殘差」",
+          "anger_vs_sadness": "次要比較「等強度下憤怒 vs 悲傷」",
+          "pain_resid3": "次要檢驗「疼痛殘差」",
+          "anger_resid2_vs_resid3": "次要比較「憤怒殘差：只扣 V、A vs 扣 V、A、D」",
+          "pain_painaxis_vs_pain": "次要比較「Pain-axis 疼痛向量 vs 疼痛向量」"}
+# induction "failed" -> these rows become untestable (stats.R_FAILED)
+HYP_IF_FAILED = {"anger": ("H1", "H3", "H4", "anger_vs_sadness", "anger_resid2_vs_resid3"),
+                 "fear": ("H3",),
+                 "sadness": ("anger_vs_sadness",),
+                 "joy": ("H5",),
+                 "compassion": ("H5", "compassion_resid3"),
+                 "pain": ("H2", "pain_resid3", "pain_painaxis_vs_pain")}
+# induction "fallback" -> these rows use the emotion's own alpha (stats.FALLBACK_NOTE)
+HYP_IF_FALLBACK = {"anger": ("H1",), "pain": ("H2",)}
+
+
+def _failed_effect(e: str) -> str:
+    hyps = HYP_IF_FAILED.get(e, ())
+    if not hyps:
+        return "不影響任何預先登記的檢驗"
+    txt = f"{'、'.join(HYP_ZH[h] for h in hyps)}會寫成「無法判斷」"
+    return txt if set(hyps) & set(PRIMARY_HYPS) else f"不影響 H1–H4；{txt}"
+
+
+def _fallback_effect(e: str) -> str:
+    hyps = HYP_IF_FALLBACK.get(e, ())
+    if not hyps:
+        return "不影響 H1–H4 和次要檢驗（它們用 α_max 或 α_eq）"
+    return (f"{'、'.join(HYP_ZH[h] for h in hyps)}改用這個強度，結果標示「強度不同」；"
+            "其他檢驗仍用 α_max 或 α_eq，不受影響")
 AXIS_ZH = {"V": "正負面（V）", "A": "激動程度（A）", "D": "掌控感（D）"}
 RESID_ZH = {"anger__resid3": "憤怒殘差（扣 V、A、D）", "anger__resid2": "憤怒殘差（只扣 V、A）",
             "pain__resid3": "疼痛殘差（扣 V、A、D）",
@@ -513,11 +613,10 @@ def _sec_induction(fz: dict, emotions: list[str]) -> list[str]:
         if d["status"] == "fallback":
             notes.append(f"- **{_zh(e)}：強度不同。** 在 α_max 下沒過標準，加到 α = {_a(d['alpha'])}"
                          f" 才通過（仍在它自己的通順上限 {_a(fz['coherent_max'][e])} 之內），"
-                         f"並在這個 α 另外跑了一組對照向量。影響：{HYP_FALLBACK.get(e, '不影響 H1–H4')}。")
+                         f"並在這個 α 另外跑了一組對照向量。影響：{_fallback_effect(e)}。")
         elif d["status"] == "failed":
             notes.append(f"- **{_zh(e)}：未能誘發。** 加到它自己的通順上限 "
-                         f"{_a(fz['coherent_max'][e])} 仍沒過標準。影響："
-                         f"{HYP_FAILED.get(e, '不影響 H1–H4')}。")
+                         f"{_a(fz['coherent_max'][e])} 仍沒過標準。影響：{_failed_effect(e)}。")
     out += notes or ["六種核心情緒都在 α_max 下成功誘發，H1–H4 都照原計畫檢驗。"]
     return out + [""]
 
@@ -541,18 +640,28 @@ def _sec_examples(fz: dict, texts: list[dict], emotions: list[str]) -> list[str]
     return out
 
 
-def _sec_contamination(fz: dict) -> list[str]:
+def _sec_contamination(fz: dict, emotions: list[str]) -> list[str]:
+    """Core emotions get a clean version (conditions.build_conditions); other flagged labels
+    (map emotions, pain_painaxis) are only recorded."""
     flagged = fz["contamination_at_layer"]
+    core = [e for e in flagged if e in emotions]
+    other = [e for e in flagged if e not in emotions]
     out = [f"## 六、汙染的處理（第 {fz['layer']} 層）", "",
            "「汙染」是指某個情緒向量本身就和「懲罰」或「傷害他人」的概念方向重疊得比較多"
            "（比悲傷向量多，也比 40 個非情緒概念向量的第 95 百分位數多）。"
            "這樣即使結果顯著，也可能只是向量裡本來就有「懲罰」的成分。", ""]
-    if flagged:
-        out += [f"這一層被標示的情緒：{'、'.join(_zh(e) for e in flagged)}。",
+    if core:
+        out += [f"這一層被標示的核心情緒：{'、'.join(_zh(e) for e in core)}。",
                 "處理方式：對它們另外跑「乾淨版」向量（把和懲罰／傷害方向重疊的成分扣掉）；"
                 "涉及這些情緒的檢驗，必須乾淨版也通過才算支持假設。"]
     else:
-        out.append("這一層沒有情緒被標示汙染，不需要乾淨版。")
+        out.append("這一層沒有核心情緒被標示汙染，主要和次要檢驗都不需要乾淨版。")
+    if other:
+        out += ["", f"另外被標示的非核心標籤：{'、'.join(other)}。它們只記錄在凍結檔中，"
+                    "不另外建立乾淨版；解讀涉及它們的結果時要留意這一點。"]
+        if "pain_painaxis" in other:
+            out.append("其中 Pain-axis 疼痛向量（pain_painaxis）用在"
+                       f"{HYP_ZH['pain_painaxis_vs_pain']}，這個比較不會因此另外檢查它的乾淨版。")
     return out + [""]
 
 
@@ -618,7 +727,7 @@ def render_checkpoint2(frozen: dict, metrics: pd.DataFrame, texts: list[dict],
     lines += _sec_alpha(frozen, emotions)
     lines += _sec_induction(frozen, emotions)
     lines += _sec_examples(frozen, texts, emotions)
-    lines += _sec_contamination(frozen)
+    lines += _sec_contamination(frozen, emotions)
     lines += _sec_axes(frozen)
     lines += _sec_workload(n_conditions, rate, passes)
     lines += _sec_items()

@@ -1,6 +1,8 @@
 """6.5 選層、α 與凍結設定（設計文件 §6.5，2026-11-22 修訂）。
 
-第一階段：讀 metrics.csv，依事先寫定的規則選層和 α_max，寫出 selection.json。
+第一階段：讀 metrics.csv，先確認它是完整、在網格上的校準結果（vectors.pt 的每個候選層 ×
+  核心情緒都從最小 α 連續測到最大 α 或第一個不通順的 α；否則拒絕），再依事先寫定的規則
+  選層和 α_max，寫出 selection.json。
   若 control_ratings.csv 在（該層, α_max）還沒有完整的 60 個對照向量評分，印出要執行的
   02 --controls 指令並以代碼 3 結束。control_meta.json 的層必須和選出的層相同。
 第二階段：判斷每種核心情緒是否成功誘發（需要時往上找備案 α；備案 α 缺對照評分時同樣印出
@@ -18,7 +20,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from emolab import conditions, freeze, models  # noqa: E402
+from emolab import calibration, conditions, freeze, models  # noqa: E402
 from emolab.paths import REPO_ROOT, RESULTS  # noqa: E402
 
 NEED_CONTROLS = 3
@@ -88,7 +90,17 @@ def main(argv: list[str] | None = None) -> None:
     # ---- phase 1: layer and alpha_max ----
     if not (cal_dir / "metrics.csv").exists():
         raise SystemExit(f"找不到 {cal_dir / 'metrics.csv'}：請先跑完 01 和 02。")
-    metrics = freeze.load_metrics(cal_dir / "metrics.csv")
+    vec = _torch(vec_dir / "vectors.pt")
+    try:
+        metrics = freeze.load_metrics(cal_dir / "metrics.csv")
+        freeze.validate_metrics(metrics, vec["layers"], core)
+    except (ValueError, KeyError) as exc:
+        raise SystemExit(
+            f"{cal_dir / 'metrics.csv'} 不是完整、在網格上的校準結果，拒絕選層"
+            f"（候選層 {list(vec['layers'])}，α 網格 {calibration.ALPHA_GRID}）。"
+            "請確認 01、02 都已跑完；每個層 × 核心情緒都要從最小的 α 連續測到最大的 α，"
+            "或停在第一個不通順的 α，而且不能有重複、缺漏、不在網格上的 α 或空白的通順欄位。\n"
+            f"{exc}") from exc
     contamination = _json(vec_dir / "contamination.json")
     table = freeze.layer_table(metrics, contamination, core)
     layer = freeze.choose_layer(metrics, contamination, core)
@@ -121,7 +133,6 @@ def main(argv: list[str] | None = None) -> None:
         print(f"{e}: {d['status']} alpha={d['alpha']} gain={d['gain']:.3f} "
               f"rating={d['rating']:.3f} p95={d['p95']:.3f}", flush=True)
     target, eq = freeze.alpha_eq(metrics, layer, cmax, ind, core)
-    vec = _torch(vec_dir / "vectors.pt")
     residuals = _torch(ax_dir / "residuals.pt")
     payload = freeze.build_payload(
         model=name, layer=layer, alpha_max=amax, coherent=cmax, induction=ind,
