@@ -1,7 +1,7 @@
 # emotional
 
 在開源大模型（Qwen3-8B 等）內部提取情緒方向，用「調整（steering）」改變模型的內部情緒狀態，並測量其道德判斷的變化。
-目前覆蓋階段 0–2：環境、情緒向量的提取與驗證、情緒軸的擬合。
+目前覆蓋階段 0–5：環境、情緒向量的提取與驗證、情緒軸的擬合、校準與凍結、道德題實驗、分析與結果摘要。
 
 ## 目錄結構
 
@@ -59,6 +59,34 @@ python scripts/6.2_emotion_vectors/08_checkpoint_examples.py --model qwen3-8b
 `checkpoint1_examples.md`（範例文字）。範例裡的調整強度 α 只是暫定值。
 
 測試：`python -m pytest -v`（gpu 與 network 測試預設跳過）。
+
+## 執行順序（階段 3–5）
+
+校準、道德題實驗、分析三段都需要先完成上面階段 0–2。6.5 與 6.7 需要顯卡；6.8 只讀結果檔，不需要顯卡。
+
+```bash
+# 階段 3：校準與凍結（6.5）。03 會把層、α_max、α_eq 等設定寫進 frozen_config.json 並凍結。
+python scripts/6.5_calibration/01_generate_calibration.py --model qwen3-8b
+python scripts/6.5_calibration/02_measure_calibration.py --model qwen3-8b
+python scripts/6.5_calibration/03_select_and_freeze.py --model qwen3-8b
+python scripts/6.5_calibration/02_measure_calibration.py --model qwen3-8b --controls   # 對照向量的校準
+python scripts/6.5_calibration/03_select_and_freeze.py --model qwen3-8b
+python scripts/6.5_calibration/04_checkpoint2.py --model qwen3-8b                       # 檢查點 2 摘要
+
+# 階段 4：道德題實驗（6.7）。先跑先導（--conditions / --limit-items / --out-dir，不可寫進正式資料夾），
+# 確認沒問題後再不帶這些參數跑全部條件（數小時）。
+python scripts/6.7_runs/01_run_conditions.py --model qwen3-8b --conditions baseline,anger@+0.6000,text_anger --limit-items 10 --out-dir results/6.7_runs/Qwen_3_8B_instruct/pilot
+python scripts/6.7_runs/01_run_conditions.py --model qwen3-8b
+python scripts/6.7_runs/02_generate_examples.py --model qwen3-8b
+
+# 階段 5：分析（6.8，不需要顯卡）
+python scripts/6.8_analysis/01_stats.py       # 預先登記檢驗 → primary.csv、secondary.csv、exploratory.json、interpretation.md
+python scripts/6.8_analysis/02_figures.py     # 圖 → results/6.8_analysis/<模型名>/figures/*.png
+python scripts/6.8_analysis/03_results_summary.py   # 繁體中文摘要 → results_summary.md（先讀這份）
+```
+
+03 會在任何一個輸入檔缺少時拒絕執行。圖上的中文字型用 Microsoft JhengHei，其次 Microsoft YaHei，
+都沒有就改用英文標籤。
 
 ## 外部資料
 
