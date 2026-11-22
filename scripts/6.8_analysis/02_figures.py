@@ -78,6 +78,33 @@ def _band(ax, xs, lows, highs, color, alpha, label):
         ax.fill_between(xs[ok], lows[ok], highs[ok], color=color, alpha=alpha, lw=0, label=label)
 
 
+def _isfinite(x) -> bool:
+    """True for a real finite number; None / NaN / non-numbers are missing."""
+    try:
+        return bool(np.isfinite(float(x)))
+    except (TypeError, ValueError):
+        return False
+
+
+def control_ranges(scores, task, labels, a) -> dict:
+    """2.5-97.5 percentile range of the control effects, ONLY at the alphas that have data:
+    {"concept": {alpha: (lo, hi, n)}, "random": {alpha: (lo, hi, n)}}. No interpolation."""
+    def rng(names):
+        e = _effects_of(scores, task, names)
+        e = e[np.isfinite(e)]
+        return (float(np.percentile(e, 2.5)), float(np.percentile(e, 97.5)), int(e.size))             if e.size else None
+    out = {"concept": {}, "random": {}}
+    for al in (-a, a):
+        r = rng([conditions.condition_name(c, al) for c in labels["concepts"]])
+        if r:
+            out["concept"][al] = r
+    for al in (-a, -a / 2, a / 2, a):
+        r = rng([conditions.condition_name(f"random{i:02d}", al) for i in range(stats.N_RANDOM)])
+        if r:
+            out["random"][al] = r
+    return out
+
+
 # ---------- 1. dose response ----------
 
 def fig_dose_response(scores, frozen, labels, task, out_dir, font=None) -> Path:
@@ -86,29 +113,20 @@ def fig_dose_response(scores, frozen, labels, task, out_dir, font=None) -> Path:
     base = scores[task]["baseline"] if "baseline" in scores[task].columns else None
     with _style(font):
         fig, ax = plt.subplots(figsize=(10, 6.5))
-        # concept band (conditions exist only at ±α_max; 0 at α = 0)
-        lo, hi = [], []
-        for al in (-a, a):
-            e = _effects_of(scores, task, [conditions.condition_name(c, al)
-                                           for c in labels["concepts"]])
-            e = e[np.isfinite(e)]
-            lo.append(np.percentile(e, 2.5) if e.size else np.nan)
-            hi.append(np.percentile(e, 97.5) if e.size else np.nan)
-        _band(ax, [-a, 0, a], [lo[0], 0, lo[1]], [hi[0], 0, hi[1]], "#bdbdbd", 0.5,
-              tr("40 個概念向量（2.5–97.5 百分位）", "40 concept vectors (2.5-97.5 pct)"))
-        # random-direction band at each α where they exist
-        rx, rlo, rhi = [], [], []
-        for al in alphas:
-            if al == 0:
-                rx.append(0.0); rlo.append(0.0); rhi.append(0.0)
-                continue
-            e = _effects_of(scores, task, [conditions.condition_name(f"random{i:02d}", al)
-                                           for i in range(stats.N_RANDOM)])
-            e = e[np.isfinite(e)]
-            if e.size:
-                rx.append(al); rlo.append(np.percentile(e, 2.5)); rhi.append(np.percentile(e, 97.5))
-        _band(ax, rx, rlo, rhi, "#dcdcdc", 0.6,
-              tr("隨機方向（2.5–97.5 百分位）", "random directions (2.5-97.5 pct)"))
+        ranges = control_ranges(scores, task, labels, a)
+        off = a * 0.025
+        n_c = max((v[2] for v in ranges["concept"].values()), default=0)
+        n_r = max((v[2] for v in ranges["random"].values()), default=0)
+        for key, dx, color, zh, en in (
+                ("concept", -off, "#9a9a9a",
+                 f"概念向量（只在 ±α_max，最多 {n_c} 個）2.5–97.5%",
+                 f"concept vectors (only at +-alpha_max, up to {n_c}) 2.5-97.5%"),
+                ("random", off, "#c8c8c8",
+                 f"隨機方向（只在有資料的 α，最多 {n_r} 個）2.5–97.5%",
+                 f"random directions (only where measured, up to {n_r}) 2.5-97.5%")):
+            for i, (al, (lo, hi, _)) in enumerate(sorted(ranges[key].items())):
+                ax.vlines(al + dx, lo, hi, color=color, lw=12, alpha=0.7, zorder=1,
+                          label=tr(zh, en) if i == 0 else None)
         for e in labels["core"]:
             ys, los, his = [], [], []
             for al in alphas:
@@ -143,7 +161,10 @@ def fig_emotion_map(explo, vad, task, out_dir, labels, font=None) -> Path | None
         return None
     v = vad.drop_duplicates("label").set_index("label")
     top = {d["label"] for d in t.get("top_deviations", [])}
-    effects = {e: y for e, y in t["effects"].items() if e in v.index and np.isfinite(y)}
+    effects = {e: float(y) for e, y in t["effects"].items() if e in v.index and _isfinite(y)}
+    n_total = len(t["effects"])
+    if not effects:
+        return None
     core = set(labels["core"])
     with _style(font):
         fig, axes = plt.subplots(1, 3, figsize=(15, 5.5), sharey=True)
@@ -161,8 +182,10 @@ def fig_emotion_map(explo, vad, task, out_dir, labels, font=None) -> Path | None
             ax.axhline(0, color="black", lw=0.8)
             ax.set_xlabel(tr(zh, en))
         axes[0].set_ylabel(tr("效果（相對未調整）@ +α_max", "effect (vs unsteered) @ +alpha_max"))
-        fig.suptitle(tr(f"情緒地圖：{_task_name(task, tr)}（粗框 = 偏離三軸預測最多的三種）",
-                        f"Emotion map: {_task_name(task, tr)} (outlined = top-3 deviators)"))
+        fig.suptitle(tr(f"情緒地圖：{_task_name(task, tr)}（粗框 = 偏離三軸預測最多的三種；"
+                        f"{len(effects)}/{n_total} 種情緒有資料）",
+                        f"Emotion map: {_task_name(task, tr)} (outlined = top-3 deviators; "
+                        f"{len(effects)}/{n_total} emotions with data)"))
         return _save(fig, Path(out_dir) / f"emotion_map_{task}.png")
 
 
@@ -266,16 +289,30 @@ def fig_refusal(explo, frozen, labels, out_dir, font=None) -> Path | None:
 
 # ---------- driver ----------
 
+def _safe(name, fn, *args) -> Path | None:
+    """Run one figure; a missing-data skip or an unexpected error is printed, never fatal."""
+    try:
+        p = fn(*args)
+    except Exception as exc:  # noqa: BLE001 - one bad figure must not kill the others
+        print(f"略過圖 {name}：{type(exc).__name__}: {exc}", flush=True)
+        return None
+    if p is None:
+        print(f"略過圖 {name}：缺少所需資料", flush=True)
+    return p
+
+
 def make_all(scores, frozen, labels, primary, secondary, explo, vad, out_dir, font=None) -> list[Path]:
     paths = []
     for task in ("h1_rating", "h2"):
         if task in scores:
-            paths.append(fig_dose_response(scores, frozen, labels, task, out_dir, font))
+            paths.append(_safe(f"dose_response_{task}", fig_dose_response, scores, frozen, labels,
+                               task, out_dir, font))
     for task in ("h1_rating", "h2"):
-        paths.append(fig_emotion_map(explo, vad, task, out_dir, labels, font))
-    paths += [fig_anger_vs_fear(primary, out_dir, font),
-              fig_text_vs_vector(secondary, out_dir, labels, font),
-              fig_refusal(explo, frozen, labels, out_dir, font)]
+        paths.append(_safe(f"emotion_map_{task}", fig_emotion_map, explo, vad, task, out_dir,
+                           labels, font))
+    paths += [_safe("anger_vs_fear_eq", fig_anger_vs_fear, primary, out_dir, font),
+              _safe("text_vs_vector", fig_text_vs_vector, secondary, out_dir, labels, font),
+              _safe("refusal", fig_refusal, explo, frozen, labels, out_dir, font)]
     return [p for p in paths if p is not None]
 
 

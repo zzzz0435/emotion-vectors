@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 
 from emolab.conditions import condition_name, load_labels
-from emolab.stats import AXIS_NAMES, HYP_NAMES, _tri, _txt
+from emolab.stats import AXIS_NAMES, GATE_NEED, HYP_NAMES, _tri, _txt
 
 DASH = "—"
 BANNER = "⚠ 凍結後改過分析程式：以下所有結果僅屬探索性"
@@ -39,8 +39,8 @@ SECONDARY_NAMES = {
 }
 PREDICTED = {"+": "預測較高", "−": "預測較低", "two-sided": "不預設方向"}
 PLAIN = {   # hypothesis -> what is being compared, in everyday words
-    "H1": "把憤怒向量調高，懲罰評分比調 40 個無關概念向量時更重",
-    "H2": "把疼痛向量調高，比調 40 個無關概念向量時更常選傷害他人的選項",
+    "H1": "把憤怒向量調高，懲罰評分比調 {n} 個無關概念向量時更重",
+    "H2": "把疼痛向量調高，比調 {n} 個無關概念向量時更常選傷害他人的選項",
     "H3": "兩者誘發強度相同時，憤怒讓懲罰變重的效果大於恐懼",
     "H4": "憤怒向量扣掉通用軸之後，剩下的部分仍讓懲罰變重",
 }
@@ -133,7 +133,7 @@ def _rows(df: pd.DataFrame) -> dict:
 
 # ---------- sections ----------
 
-def _conclusion(primary: pd.DataFrame, interpretation: list[str]) -> str:
+def _conclusion(primary: pd.DataFrame, interpretation: list[str], changed: bool = False) -> str:
     rows = _rows(primary)
     groups = {"支持": [], "不支持": [], "無法檢驗": []}
     for h in HYP_NAMES:
@@ -143,13 +143,14 @@ def _conclusion(primary: pd.DataFrame, interpretation: list[str]) -> str:
     key = next((s for s in interpretation
                 if s.startswith(("H1 成立", "H3 成立", "H4 成立"))), None)
     tail = f"；{key.rstrip('。')}" if key else ""
-    return (f"在預先登記的四個假設中：{'；'.join(parts) or '沒有可報告的結果'}{tail}。"
+    lead = "（探索性）四個假設的結果：" if changed else "在預先登記的四個假設中："
+    return (f"{lead}{'；'.join(parts) or '沒有可報告的結果'}{tail}。"
             "這只描述調整模型內部方向後答案的變化，不代表模型有主觀感受。")
 
 
-def _plain_line(h: str, row, frozen: dict) -> str:
+def _plain_line(h: str, row, frozen: dict, n_concepts: int) -> str:
     v = verdict(row)
-    what = PLAIN[h]
+    what = PLAIN[h].format(n=n_concepts)
     if v == "支持":
         note = f"（{_txt(row.get('alpha_note'))}）" if _txt(row.get("alpha_note")) else ""
         line = (f"- **{h}**：支持{note}。白話：{what}。平均差 {fmt(row['mean_d'], 3, True)}"
@@ -175,7 +176,7 @@ def _table(head: list[str], rows: list[list[str]]) -> list[str]:
     return out
 
 
-def _primary_section(primary: pd.DataFrame, frozen: dict) -> list[str]:
+def _primary_section(primary: pd.DataFrame, frozen: dict, n_concepts: int) -> list[str]:
     rows = _rows(primary)
     tbl = []
     for h, name in HYP_NAMES.items():
@@ -188,9 +189,9 @@ def _primary_section(primary: pd.DataFrame, frozen: dict) -> list[str]:
                     DASH if untestable else fmt_p(r["p_holm"]), _gate(r), verdict(r)])
     out = _table(["假設（白話）", "效果（平均差）", "95% 信賴區間", "p（Holm 校正）",
                   "對照閘門", "結論"], tbl)
-    out += ["", "效果是「調整後的分數」減去「40 個無關概念向量的平均」（H3 則是憤怒減恐懼），"
-            "正值表示朝預測方向。對照閘門指效果要贏過至少 38 個概念向量。", ""]
-    out += [_plain_line(h, rows[h], frozen) for h in HYP_NAMES if h in rows]
+    out += ["", f"效果是「調整後的分數」減去「{n_concepts} 個無關概念向量的平均」（H3 則是憤怒減恐懼），"
+            f"正值表示朝預測方向。對照閘門指效果要贏過至少 {GATE_NEED} 個概念向量。", ""]
+    out += [_plain_line(h, rows[h], frozen, n_concepts) for h in HYP_NAMES if h in rows]
     return out
 
 
@@ -312,11 +313,14 @@ def render_results(primary: pd.DataFrame, secondary: pd.DataFrame, exploratory: 
     if isinstance(interpretation, str):
         interpretation = parse_interpretation(interpretation)
     out: list[str] = []
-    if _is_changed(primary, secondary, exploratory):
+    changed = _is_changed(primary, secondary, exploratory)
+    n_concepts = len(load_labels()["concepts"])
+    if changed:
         out += [f"> **{BANNER}**（分析程式在凍結後被改過，所有結果都不能當作預先登記的檢驗）", ""]
-    out += ["# 結果摘要", "", "## 1. 一句話結論", "", _conclusion(primary, interpretation), "",
-            "## 2. 四個主要假設（H1–H4）", ""]
-    out += _primary_section(primary, frozen)
+    out += ["# 結果摘要", "", "## 1. 一句話結論", "", _conclusion(primary, interpretation, changed), "",
+            "## 2. （探索性）四個假設（H1–H4）的結果" if changed else "## 2. 四個主要假設（H1–H4）",
+            ""]
+    out += _primary_section(primary, frozen, n_concepts)
     out += ["", "## 3. 判讀", ""]
     out += [f"- {s}" for s in interpretation] or [f"- {DASH}"]
     out += ["", "## 4. 次要（單獨校正）結果", ""]

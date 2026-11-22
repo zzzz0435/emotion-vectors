@@ -243,3 +243,68 @@ def test_03_writes_summary(tmp_path):
     mod.main(["--frozen", str(frozen), "--out-dir", str(tmp_path)])
     text = (tmp_path / "results_summary.md").read_text(encoding="utf-8")
     assert "無法檢驗（未能誘發）" in text and "句子一。" in text
+
+
+# ---------- fix round 1 ----------
+
+def test_banner_switches_headline_and_section_title_to_exploratory():
+    on, off = render(changed=True), render(changed=False)
+    assert "在預先登記的四個假設中" not in on and "四個主要假設" not in on
+    assert "（探索性）四個假設的結果" in on and "## 2. （探索性）四個假設" in on
+    assert "在預先登記的四個假設中" in off and "## 2. 四個主要假設" in off
+
+
+def test_concept_count_not_hardcoded(monkeypatch):
+    monkeypatch.setattr(rr, "load_labels", lambda: {**LABELS, "concepts": [f"c{i}" for i in range(7)]})
+    md = render()
+    assert "調 7 個無關概念向量" in md and "「7 個無關概念向量的平均」" in md
+    assert "40 個" not in md
+
+
+def test_control_ranges_only_where_data_exist(synth):
+    fig = _load("02_figures")
+    scores = synth[0]
+    r = fig.control_ranges(scores, "h1_rating", LABELS, A)
+    assert set(r["concept"]) == {-A, A}                       # nothing at +-A/2 or 0
+    assert set(r["random"]) == {-A, -A / 2, A / 2, A}         # nothing at 0
+    # drop random conditions at +A/2: that alpha must disappear, not be bridged
+    from emolab.conditions import condition_name
+    cut = scores["h1_rating"].drop(columns=[condition_name(f"random{i:02d}", A / 2) for i in range(10)])
+    r2 = fig.control_ranges({**scores, "h1_rating": cut}, "h1_rating", LABELS, A)
+    assert A / 2 not in r2["random"] and -A / 2 in r2["random"]
+
+
+def test_emotion_map_survives_null_effects_roundtrip(synth, tmp_path):
+    import json
+    fig = _load("02_figures")
+    _, _, _, explo, vad = synth
+    explo = json.loads(json.dumps(explo, allow_nan=False, default=lambda o: None)) \
+        if False else explo
+    effects = dict(explo["emotion_map"]["h1_rating"]["effects"])
+    effects[CORE[0]] = float("nan")
+    effects[CORE[1]] = float("nan")
+    bad = {"emotion_map": {"h1_rating": {**explo["emotion_map"]["h1_rating"], "effects": effects}}}
+    import math
+    clean = {"emotion_map": {"h1_rating": {**bad["emotion_map"]["h1_rating"], "effects": {
+        k: (None if isinstance(v, float) and math.isnan(v) else v) for k, v in effects.items()}}}}
+    loaded = json.loads(json.dumps(clean, allow_nan=False))
+    assert loaded["emotion_map"]["h1_rating"]["effects"][CORE[0]] is None
+    _ok(fig.fig_emotion_map(loaded, vad, "h1_rating", tmp_path, LABELS, None), "emotion_map_h1_rating.png")
+    all_null = {"emotion_map": {"h2": {"effects": {e: None for e in effects}}}}
+    assert fig.fig_emotion_map(all_null, vad, "h2", tmp_path, LABELS, None) is None
+
+
+def test_make_all_with_missing_conditions(synth, tmp_path, capsys):
+    fig = _load("02_figures")
+    scores, prim, sec, explo, vad = synth
+    keep = {t: (df.drop(columns=[c for c in df.columns if c.startswith(("text_fear", "fear@", "joy@"))
+                                 or c.startswith("random03")]) if isinstance(df, pd.DataFrame) else df)
+            for t, df in scores.items()}
+    paths = fig.make_all(keep, FROZEN, LABELS, prim, sec, explo, vad, tmp_path, None)
+    assert paths and all(p.exists() for p in paths)
+    # no baseline at all: figures skip or draw, never raise
+    nobase = {t: df.drop(columns=["baseline"]) for t, df in scores.items()}
+    fig.make_all(nobase, FROZEN, LABELS, prim, sec, explo, vad, tmp_path / "nb", None)
+    # an unexpected error inside one figure is reported, not fatal
+    out = fig._safe("boom", lambda: 1 / 0)
+    assert out is None and "略過圖 boom" in capsys.readouterr().out
