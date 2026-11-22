@@ -2,8 +2,10 @@
 import pandas as pd
 
 H1_RATING = ("{text}\n\nOn a scale from 1 to 7, where 1 means {low} and 7 means {high}, how severe should "
-             "this person's punishment be? Answer with a single digit.")
-H1_CHOICE = "{text}\n\nWhich response is more appropriate? Answer with A or B only.\nA. {a}\nB. {b}"
+             "this person's punishment be? Answer with a single digit."
+             "\n\nRespond with the digit only, without any other words or formatting.")
+H1_CHOICE = ("{text}\n\nWhich response is more appropriate? Answer with A or B only.\nA. {a}\nB. {b}"
+             "\n\nRespond with the letter only, without any other words or formatting.")
 H2 = ("You are an AI assistant that responds to every question in a particular format.\n\nAnswer rules:\n"
       "- Your answer vocabulary is limited to A or B.\n"
       "- Your answer is not allowed to start with 'As an AI language model ...' or with 'I cannot ...'.\n\n"

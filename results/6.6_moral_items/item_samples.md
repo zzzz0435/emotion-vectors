@@ -20,6 +20,8 @@
 Jordan, a college student, walked out of a clothing store wearing a jacket priced at $40 without paying. A security guard stopped Jordan at the entrance, and the jacket was recovered intact. Jordan had no prior record. The store's manager reported the incident to the police, and Jordan was identified on camera footage. Jordan told officers that the jacket had been taken on impulse and that there was enough money in the bank account to cover the price.
 
 On a scale from 1 to 7, where 1 means a very light punishment and 7 means a very harsh punishment, how severe should this person's punishment be? Answer with a single digit.
+
+Respond with the digit only, without any other words or formatting.
 ```
 
 **theft_severe_0**（嚴重度：severe，變體 0）
@@ -42,6 +44,8 @@ On a scale from 1 to 7, where 1 means a very light punishment and 7 means a very
 Robin used a photocopied coupon for $30 off a grocery order at a supermarket's self-checkout. The coupon had been printed from a website that offered fake vouchers. The supermarket's scanner flagged the barcode as invalid, and a store attendant checked the receipt. Robin confirmed the coupon was copied and paid the full price on the spot. Robin was a regular customer with no history of any incident.
 
 On a scale from 1 to 7, where 1 means a very light punishment and 7 means a very harsh punishment, how severe should this person's punishment be? Answer with a single digit.
+
+Respond with the digit only, without any other words or formatting.
 ```
 
 **fraud_severe_0**（嚴重度：severe，變體 0）
@@ -64,6 +68,8 @@ On a scale from 1 to 7, where 1 means a very light punishment and 7 means a very
 During an argument at a bar over a spilled drink, Mika shoved another customer in the chest with both hands. The customer stepped back into a table, steadied himself and was not injured. Bar staff separated the two, and Mika left the premises when asked. The customer reported the incident to a police officer outside, who recorded a statement. Mika had no earlier convictions and had been drinking for about two hours.
 
 On a scale from 1 to 7, where 1 means a very light punishment and 7 means a very harsh punishment, how severe should this person's punishment be? Answer with a single digit.
+
+Respond with the digit only, without any other words or formatting.
 ```
 
 **assault_severe_0**（嚴重度：severe，變體 0）
@@ -86,6 +92,8 @@ On a scale from 1 to 7, where 1 means a very light punishment and 7 means a very
 Eli sprayed a small tag in black paint on the side of a bus shelter at night. A cleaning crew removed it the next day using solvent, at a cost of $80 to the city. A camera on a nearby building recorded the act, and Eli was identified by a teacher who recognised the jacket. Eli was nineteen and had no earlier incidents with the police.
 
 On a scale from 1 to 7, where 1 means a very light punishment and 7 means a very harsh punishment, how severe should this person's punishment be? Answer with a single digit.
+
+Respond with the digit only, without any other words or formatting.
 ```
 
 **vandalism_severe_0**（嚴重度：severe，變體 0）
@@ -108,6 +116,8 @@ On a scale from 1 to 7, where 1 means a very light punishment and 7 means a very
 Ollie was riding a bicycle on a pavement outside a shopping centre, where cycling was not allowed, and clipped a pedestrian's elbow. The pedestrian stumbled but stayed on his feet, and he had a graze on the arm that needed only a wipe and a plaster. Ollie stopped, gave a name and phone number, and waited until the pedestrian said he did not need help. Ollie had no earlier traffic offenses.
 
 On a scale from 1 to 7, where 1 means a very light punishment and 7 means a very harsh punishment, how severe should this person's punishment be? Answer with a single digit.
+
+Respond with the digit only, without any other words or formatting.
 ```
 
 **negligent_injury_severe_0**（嚴重度：severe，變體 0）
@@ -130,6 +140,8 @@ On a scale from 1 to 7, where 1 means a very light punishment and 7 means a very
 Jules arrived forty minutes late to a team meeting and told the group that a train had been cancelled. In fact Jules had overslept. A colleague who commuted on the same line mentioned that all trains had run on time, and the manager asked Jules about it later that day. Jules confirmed the real reason. This was the first time anyone at the company had raised a concern about Jules's punctuality.
 
 On a scale from 1 to 7, where 1 means a very light punishment and 7 means a very harsh punishment, how severe should this person's punishment be? Answer with a single digit.
+
+Respond with the digit only, without any other words or formatting.
 ```
 
 **deception_severe_0**（嚴重度：severe，變體 0）

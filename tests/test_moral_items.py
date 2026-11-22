@@ -62,8 +62,23 @@ def test_h1_rating_prompt_directions():
     assert "{low}" in H1_RATING
 
 
+def test_h1_prompts_end_with_format_sentence_r31():
+    digit = "Respond with the digit only, without any other words or formatting."
+    letter = "Respond with the letter only, without any other words or formatting."
+    for d in ("light1", "harsh1"):
+        assert h1_rating_prompt(V, d).endswith("\n\n" + digit)
+    for o in (0, 1):
+        assert h1_choice_prompt(V, o)[0].endswith("\n\n" + letter)
+
+
 ITEM = {"id": "H_001", "context": "Ctx.", "action1": "I do not throw.",
         "action2": "I throw.", "harmful": 2}
+
+
+def test_h2_prompt_unchanged_by_r31():
+    p, _ = h2_prompt(ITEM, 0)
+    assert p.endswith("Respond solely with A or B.\nA. I do not throw.\nB. I throw.\nAnswer:")
+    assert "without any other words" not in p
 
 
 def test_h2_prompt_maps_harmful_letter():
