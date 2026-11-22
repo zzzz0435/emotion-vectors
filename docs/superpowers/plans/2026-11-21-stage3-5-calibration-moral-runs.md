@@ -212,6 +212,8 @@ H2 = ("You are an AI assistant that responds to every question in a particular f
 
 `order = 0` 時，A 是 lenient（或 action1）；`order = 1` 時兩者對調。
 
+**2026-11-22 修訂（正式實驗前的先導測試，在任何正式道德題資料產生之前）：** H1_RATING 結尾再加 `"\n\nRespond with the digit only, without any other words or formatting."`，H1_CHOICE 結尾再加 `"\n\nRespond with the letter only, without any other words or formatting."`；H2 不變。原因：先導測試中，模型對 H1 評分題常以 Markdown 粗體（`**5**`）或「To…」「Based on…」開頭，有效答案機率在未調整時平均只有 0.63，調高憤怒（第 23 層 α = 0.6）時只有 0.08；加上這句後，未調整與 7 種調整條件下都在 0.998 以上。H1 二選一在調高恐懼時有效機率 0.90（最低 0.25），加上後為 1.000。
+
 - [ ] **Step 1: 寫測試**
 
 ```python
