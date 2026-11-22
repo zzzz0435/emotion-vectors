@@ -1,0 +1,40 @@
+{
+  "model": "Qwen_3_8B_instruct",
+  "layer": 23,
+  "alpha_max": 0.6,
+  "coherent_max": {
+    "anger": 0.6,
+    "fear": 0.7,
+    "sadness": 0.8,
+    "joy": 0.7,
+    "compassion": 0.8,
+    "pain": 0.7
+  },
+  "layer_table": [
+    {
+      "layer": 9,
+      "alpha_max": 0.5,
+      "mean_gain": 0.6185824707424268,
+      "n_flagged": 1
+    },
+    {
+      "layer": 14,
+      "alpha_max": 0.4,
+      "mean_gain": 0.981290715315715,
+      "n_flagged": 4
+    },
+    {
+      "layer": 18,
+      "alpha_max": 0.4,
+      "mean_gain": 0.9174821478610854,
+      "n_flagged": 0
+    },
+    {
+      "layer": 23,
+      "alpha_max": 0.6,
+      "mean_gain": 2.0862103076634404,
+      "n_flagged": 0
+    }
+  ],
+  "created_at": "2026-11-22T08:04:27+00:00"
+}
