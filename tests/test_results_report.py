@@ -308,3 +308,113 @@ def test_make_all_with_missing_conditions(synth, tmp_path, capsys):
     # an unexpected error inside one figure is reported, not fatal
     out = fig._safe("boom", lambda: 1 / 0)
     assert out is None and "略過圖 boom" in capsys.readouterr().out
+
+
+# ---------- final-review wave ----------
+
+REAL_AXES = {"anger__resid3": ["V", "D"], "anger__resid2": ["V"],
+             "pain__resid3": ["V", "A", "D"], "compassion__resid3": ["V", "A", "D"]}
+
+
+def _sec_with(**kw):
+    prim, sec = _tables()
+    row = dict(hypothesis="pain_painaxis_vs_pain", task="h2", predicted="two-sided", mean_d=0.02,
+               ci_low=-0.01, ci_high=0.05, p_holm=0.3, supported=False)
+    return prim, pd.concat([sec, _frame([{**row, **kw}], SECONDARY_COLS)], ignore_index=True)
+
+
+def test_item_counts_column_and_explanation():
+    md = render()
+    assert "有效題數" in md
+    assert f"30 / {rr.n_items('h1_rating')}" in md and f"30 / {rr.n_items('h2')}" in md
+    assert (rr.n_items("h1_rating"), rr.n_items("h2")) == (72, 150)
+    assert "沒有任何有效回答的題目會被排除" in md and "差為 0" in md
+    h1_line = next(ln for ln in md.splitlines() if ln.startswith("- **H1**"))
+    assert "有效題數 30 / 72" in h1_line
+    h2_line = next(ln for ln in md.splitlines() if ln.startswith("- **H2**"))
+    assert "有效題數 30 / 150" in h2_line
+
+
+def test_anger_resid_label_comes_from_frozen():
+    prim, sec = _tables()
+    sec = pd.concat([sec, _frame([dict(hypothesis="anger_resid2_vs_resid3", task="h1_rating",
+                                       predicted="+", mean_d=0.1, ci_low=0.0, ci_high=0.2,
+                                       p_holm=0.1, supported=False)], SECONDARY_COLS)],
+                    ignore_index=True)
+    md = rr.render_results(prim, sec, EXPLO, SENTENCES, {**FZ, "residual_removed_axes": REAL_AXES})
+    assert "只扣 V（anger__resid2）vs 扣 V、D（anger__resid3）：看掌控感（D）的貢獻" in md
+    md2 = rr.render_results(prim, sec, EXPLO, SENTENCES, {**FZ, "residual_removed_axes": {
+        "anger__resid3": ["V", "A", "D"], "anger__resid2": ["V", "A"]}})
+    assert "只扣 V、A（anger__resid2）vs 扣 V、A、D（anger__resid3）" in md2
+    # no record in the frozen file: falls back to the generic name
+    md3 = rr.render_results(prim, sec, EXPLO, SENTENCES, {**FZ, "residual_removed_axes": {}})
+    assert "憤怒只扣兩個軸 vs 扣三個軸" in md3
+
+
+def test_two_sided_rows_never_say_support():
+    _, sec = _sec_with(supported=True, p_holm=0.001)
+    assert rr.verdict(sec.iloc[-1]) == "有顯著差異"
+    _, sec = _sec_with(supported=False)
+    assert rr.verdict(sec.iloc[-1]) == "沒有偵測到差異"
+    prim, sec = _sec_with(supported=True)
+    md = rr.render_results(prim, sec, EXPLO, SENTENCES, FZ)
+    line = next(ln for ln in md.splitlines() if ln.startswith("| Pain-axis"))
+    assert "有顯著差異" in line and "支持" not in line
+    # a directional row keeps the old words
+    assert rr.verdict(pd.Series({"supported": True, "predicted": "+"})) == "支持"
+
+
+def test_r31_wording_is_accurate():
+    md = render()
+    assert "在看到道德題資料之前加入" not in md
+    assert ("在正式實驗開始前，依先導試跑（3 個條件、10 題）的無效回答比例加入，只規範回答格式；"
+            "沒有參考先導的懲罰或傷害分數。") in md
+
+
+def test_conclusion_is_one_sentence_and_rules_stay_in_section3():
+    md = render()
+    sect = md[md.index("## 1."):md.index("## 2.")]
+    body = sect.split("\n\n")[1]
+    assert body.count("。") == 1 and body.endswith("。") and "）。" in body
+    assert "H1 成立" not in body and "（）" not in body
+    assert "H1（調高憤怒 → 懲罰變重）：支持。" in md[md.index("## 3."):md.index("## 4.")]
+
+
+def test_units_next_to_effects():
+    md = render()
+    assert "分（1–7 分量表）" in md and "機率（0–1，百分點）" in md
+    assert rr.fmt_eff(0.2, "h1_rating") == "+0.200 分"
+    assert rr.fmt_eff(0.012, "h2") == "+0.012 機率（+1.2 百分點）"
+    assert rr.fmt_eff(float("nan"), "h2") == "—"
+    assert "（單位：機率（0–1，百分點））" not in md       # random ranges only list h1_rating here
+    assert "（單位：分（1–7 分量表））" in md
+
+
+def test_cross_combinations_and_auxiliary_choice_shown():
+    a = FZ["alpha_max"]
+    cross = {t: {f"{e}@{s * a:+.4f}": {"effect": 0.05 * (1 if s > 0 else -1), "ci_low": -0.1,
+                                      "ci_high": 0.1, "n": 70}
+                 for e in CORE for s in (1, -1)} for t in ("h1_rating", "h1_choice", "h2")}
+    md = render(explo={**EXPLO, "cross_combinations": cross})
+    sect = md[md.index("### 探索性：輔助指標"):md.index("## 6.")]
+    assert "輔助指標" in sect and "H1 二選一" in sect
+    assert "核心情緒 × 任務的交叉結果" in sect
+    for e in CORE:
+        assert f"| {e} |" in sect
+    assert "+0.050 機率（+5.0 百分點）" in sect and "-0.050 機率（-5.0 百分點）" in sect
+    # without the data the subsections still render, with a dash
+    md0 = render()
+    assert "### 探索性：輔助指標" in md0 and "核心情緒 × 任務的交叉結果" in md0
+
+
+def test_limitations_come_from_frozen():
+    fz = {**FZ, "model": "Qwen/Qwen3-8B", "layer": 31, "alpha_eq_target": 1.5,
+          "alpha_eq": {"anger": 0.4, "joy": 0.7}, "coherent_max": {"anger": 0.6, "joy": 0.7}}
+    md = rr.render_results(*_tables(), EXPLO, SENTENCES, fz)
+    assert "只測了一個模型（Qwen/Qwen3-8B）" in md and "4-bit" in md
+    assert "受限於喜悅" in md and "1.50" in md and "層 31" in md
+    # unknown model, no coherence data: generic wording, nothing invented
+    fz2 = {**FZ, "model": "Some_Other_Model", "alpha_eq_target": 1.5, "coherent_max": 2.0}
+    md2 = rr.render_results(*_tables(), EXPLO, SENTENCES, fz2)
+    assert "Some_Other_Model" in md2 and "4-bit" not in md2
+    assert "受限於喜悅" not in md2 and "誘發增幅最小的那種情緒" in md2

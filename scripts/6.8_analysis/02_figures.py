@@ -105,6 +105,13 @@ def control_ranges(scores, task, labels, a) -> dict:
     return out
 
 
+def _eff_label(task, tr) -> str:
+    """Y-axis label with the unit: points on the 1-7 scale, or probability (0-1)."""
+    if task == "h1_rating":
+        return tr("效果（相對未調整，單位：分，1–7 分量表）", "effect (vs unsteered; points, 1-7 scale)")
+    return tr("效果（相對未調整，單位：機率 0–1）", "effect (vs unsteered; probability, 0-1)")
+
+
 # ---------- 1. dose response ----------
 
 def fig_dose_response(scores, frozen, labels, task, out_dir, font=None) -> Path:
@@ -146,7 +153,7 @@ def fig_dose_response(scores, frozen, labels, task, out_dir, font=None) -> Path:
         ax.set_xticks(alphas)
         ax.set_xticklabels([f"{x:+.2f}" for x in alphas])
         ax.set_xlabel(tr("調整強度 α（負值 = 反方向）", "steering strength alpha (negative = reversed)"))
-        ax.set_ylabel(tr("效果（相對未調整，分數差）", "effect (vs unsteered, score difference)"))
+        ax.set_ylabel(_eff_label(task, tr))
         ax.set_title(tr(f"劑量反應：{_task_name(task, tr)}", f"Dose response: {_task_name(task, tr)}"))
         ax.legend(fontsize=9, ncol=2, frameon=False)
         return _save(fig, Path(out_dir) / f"dose_response_{task}.png")
@@ -181,7 +188,7 @@ def fig_emotion_map(explo, vad, task, out_dir, labels, font=None) -> Path | None
                             color="black" if hot else "#444444")
             ax.axhline(0, color="black", lw=0.8)
             ax.set_xlabel(tr(zh, en))
-        axes[0].set_ylabel(tr("效果（相對未調整）@ +α_max", "effect (vs unsteered) @ +alpha_max"))
+        axes[0].set_ylabel(_eff_label(task, tr) + tr(" @ +α_max", " @ +alpha_max"))
         fig.suptitle(tr(f"情緒地圖：{_task_name(task, tr)}（粗框 = 偏離三軸預測最多的三種；"
                         f"{len(effects)}/{n_total} 種情緒有資料）",
                         f"Emotion map: {_task_name(task, tr)} (outlined = top-3 deviators; "
@@ -216,7 +223,7 @@ def fig_anger_vs_fear(primary, out_dir, font=None) -> Path | None:
         ax.set_xticks(range(3))
         ax.set_xticklabels([i[0] for i in items])
         ax.set_xlim(-0.6, 2.6)
-        ax.set_ylabel(tr("效果（相對未調整，95% CI）", "effect (vs unsteered, 95% CI)"))
+        ax.set_ylabel(_eff_label("h1_rating", tr) + tr("，95% CI", ", 95% CI"))
         ax.set_title(tr("憤怒 vs 恐懼（誘發強度相同，H1 懲罰評分）",
                         "Anger vs fear at equal induction (H1 rating)"))
         return _save(fig, Path(out_dir) / "anger_vs_fear_eq.png")
@@ -252,7 +259,7 @@ def fig_text_vs_vector(secondary, out_dir, labels, font=None) -> Path | None:
             ax.set_xticks(range(len(emos)))
             ax.set_xticklabels(emos, rotation=30)
             ax.set_title(_task_name(task, tr))
-            ax.set_ylabel(tr("效果（相對未調整，95% CI）", "effect (vs unsteered, 95% CI)"))
+            ax.set_ylabel(_eff_label(task, tr) + tr("，95% CI", ", 95% CI"))
             ax.legend(frameon=False, fontsize=9)
         fig.suptitle(tr("文字誘發 vs 向量調整（實心 = 向量，空心 = 文字）",
                         "Text induction vs vector steering (filled = vector, open = text)"))

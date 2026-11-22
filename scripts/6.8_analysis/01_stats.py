@@ -8,6 +8,7 @@ exploratory.json、interpretation.md（results/6.8_analysis/<模型名>/）。
 """
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -17,12 +18,22 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from emolab import conditions, integrity, stats  # noqa: E402
-from emolab.paths import DATASETS, RESULTS  # noqa: E402
+from emolab.paths import DATASETS, REPO_ROOT, RESULTS  # noqa: E402
 
 DEFAULT_MODEL = "Qwen_3_8B_instruct"
 BANNER = "⚠ 凍結後改過分析程式：以下所有結果僅屬探索性"
 VAD_CSV = DATASETS / "6.3_nrc_vad_emotions.csv"          # git-ignored; may be absent
 H2_ITEMS = DATASETS / "6.6_moralchoice_harm.json"
+VIGNETTES = DATASETS / "6.6_punishment_vignettes.json"
+TASKS = ("h1_rating", "h1_choice", "h2")
+
+# The commit whose score-producing code made results/6.7_runs/.../scores. Those files are not in
+# the frozen sha256 list, so a later change to them is checked here against git instead (M2).
+SCORES_COMMIT = "88d174c"
+SCORE_CODE = ["scripts/emolab/moral_items.py", "scripts/emolab/scoring.py",
+              "scripts/emolab/runner.py", "scripts/emolab/hooks.py", "scripts/emolab/models.py",
+              "scripts/emolab/batching.py", "datasets/6.2_emotions.json",
+              "datasets/6.5_emotion_phrases.json"]
 
 
 def hashed_files() -> dict[str, Path]:
@@ -33,6 +44,44 @@ def hashed_files() -> dict[str, Path]:
             "concepts_sha256": DATASETS / "6.2_concepts.json",
             "vignettes_sha256": DATASETS / "6.6_punishment_vignettes.json",
             "moralchoice_sha256": H2_ITEMS}
+
+
+def score_code_changed() -> bool | None:
+    """True if the score-producing code/data differs from SCORES_COMMIT, False if identical,
+    None if git cannot tell (not a repository, git missing, unknown commit)."""
+    try:
+        r = subprocess.run(["git", "diff", "--quiet", SCORES_COMMIT, "--", *SCORE_CODE],
+                           cwd=REPO_ROOT, capture_output=True, timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return {0: False, 1: True}.get(r.returncode)
+
+
+def expected_rows() -> dict[str, int]:
+    """Rows each score file must have: items x 2 variants, counted from the datasets."""
+    n_h1 = len(json.loads(VIGNETTES.read_text(encoding="utf-8")))
+    n_h2 = len(json.loads(H2_ITEMS.read_text(encoding="utf-8")))
+    return {"h1_rating": 2 * n_h1, "h1_choice": 2 * n_h1, "h2": 2 * n_h2}
+
+
+def check_complete(scores_dir: Path, frozen: dict, labels: dict,
+                   rows: dict[str, int] | None = None) -> None:
+    """Every task x condition file exists with the full number of rows, else SystemExit (I1)."""
+    rows = rows or expected_rows()
+    missing, short = [], []
+    for c in conditions.build_conditions(frozen, labels):
+        for task in TASKS:
+            name = f"{task}__{c.name}.csv"
+            path = Path(scores_dir) / name
+            if not path.exists():
+                missing.append(name)
+            elif len(pd.read_csv(path, usecols=["item_id"])) != rows[task]:
+                short.append(name)
+    if missing or short:
+        first = "、".join((missing + short)[:5])
+        raise SystemExit(
+            f"分數檔不完整：缺少 {len(missing)} 個檔案、列數不足或不符 {len(short)} 個檔案"
+            f"（例如 {first}）。請先跑完 6.7 的全部條件；分析拒絕在不完整的資料上執行。")
 
 
 def _jsonable(o):
@@ -70,6 +119,8 @@ def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--model-dir", default=DEFAULT_MODEL)
     ap.add_argument("--allow-changed-analysis", action="store_true")
+    ap.add_argument("--allow-incomplete", action="store_true",
+                    help="略過分數檔完整性檢查（只給測試用，正式分析不可使用）")
     ap.add_argument("--scores-dir", type=Path)
     ap.add_argument("--frozen", type=Path)
     ap.add_argument("--out-dir", type=Path)
@@ -84,8 +135,21 @@ def main(argv: list[str] | None = None) -> None:
     scores_dir = args.scores_dir or RESULTS / "6.7_runs" / args.model_dir / "scores"
     if not scores_dir.is_dir() or not any(scores_dir.glob("*.csv")):
         raise SystemExit(f"找不到分數檔（{scores_dir}）：請先跑完 6.7 的道德題實驗。")
-    scores = stats.load_score_table(scores_dir)
     labels = conditions.load_labels()
+    if not args.allow_incomplete:
+        check_complete(scores_dir, frozen, labels)
+    code_changed = score_code_changed()
+    if code_changed is None:
+        print("警告：無法用 git 確認產生分數的程式是否被改過，略過這項檢查。", flush=True)
+    elif code_changed:
+        if not args.allow_changed_analysis:
+            raise SystemExit(
+                f"自 {SCORES_COMMIT}（產生分數的版本）之後，產生分數的程式或資料被改過"
+                f"（{'、'.join(SCORE_CODE)}），分析拒絕執行。若確定要繼續，"
+                "請加上 --allow-changed-analysis，所有結果都會標示為探索性。")
+        print("警告：產生分數的程式或資料被改過；繼續執行，但所有結果只屬探索性。", flush=True)
+        changed = True
+    scores = stats.load_score_table(scores_dir)
     vad = pd.read_csv(VAD_CSV) if VAD_CSV.exists() else None
     h2_items = (pd.DataFrame(json.loads(H2_ITEMS.read_text(encoding="utf-8")))[["id", "harm_types"]]
                 if H2_ITEMS.exists() else None)

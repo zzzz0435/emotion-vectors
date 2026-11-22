@@ -588,8 +588,9 @@ def _write_scores(st, d):
                 d / f"{task}__{cond}.csv", index=False)
 
 
-def test_01_stats_end_to_end(tmp_path):
+def test_01_stats_end_to_end(tmp_path, monkeypatch):
     mod = _load_script()
+    monkeypatch.setattr(mod, "score_code_changed", lambda: False)
     hashed = mod.hashed_files()
     assert set(hashed) == {"stats_sha256", "conditions_sha256", "concepts_sha256",
                            "vignettes_sha256", "moralchoice_sha256"}
@@ -599,7 +600,7 @@ def test_01_stats_end_to_end(tmp_path):
     fpath.write_text(json.dumps(fz), encoding="utf-8")
     out = tmp_path / "out"
     args = ["--frozen", str(fpath), "--scores-dir", str(tmp_path / "scores"),
-            "--out-dir", str(out)]
+            "--out-dir", str(out), "--allow-incomplete"]
     mod.main(args)
     names = ("primary.csv", "secondary.csv", "exploratory.json", "interpretation.md")
     assert all((out / n).exists() for n in names)
@@ -624,3 +625,89 @@ def test_01_stats_end_to_end(tmp_path):
         "⚠ 凍結後改過分析程式：以下所有結果僅屬探索性" in md.splitlines()[0]
     for n in ("primary.csv", "secondary.csv"):
         assert pd.read_csv(out / n)["exploratory_changed_rules"].all()
+
+
+def _full_scores(d, fz, rows):
+    d.mkdir(parents=True)
+    for c in build_conditions(fz, LABELS):
+        for task, n in rows.items():
+            vs = ("light1", "harsh1") if task == "h1_rating" else ("0", "1")
+            pd.DataFrame({"item_id": [f"i{k // 2}" for k in range(n)],
+                          "variant": [vs[k % 2] for k in range(n)],
+                          "p_target": 0.5, "invalid": 0.0}).to_csv(
+                d / f"{task}__{c.name}.csv", index=False)
+
+
+def test_completeness_guard(tmp_path):
+    mod = _load_script()
+    rows = {"h1_rating": 4, "h1_choice": 4, "h2": 6}
+    d = tmp_path / "s"
+    _full_scores(d, FROZEN, rows)
+    mod.check_complete(d, FROZEN, LABELS, rows)                       # complete: passes
+    (d / "h2__baseline.csv").unlink()                                  # one missing
+    pd.DataFrame({"item_id": ["i0"], "variant": ["0"], "p_target": 0.5, "invalid": 0.0}).to_csv(
+        d / "h1_choice__baseline.csv", index=False)                    # one short
+    with pytest.raises(SystemExit) as ei:
+        mod.check_complete(d, FROZEN, LABELS, rows)
+    msg = str(ei.value.code)
+    assert "缺少 1 個" in msg and "不足或不符 1 個" in msg and "h2__baseline.csv" in msg
+
+
+def test_completeness_guard_in_main_and_override(tmp_path, monkeypatch):
+    mod = _load_script()
+    monkeypatch.setattr(mod, "score_code_changed", lambda: False)
+    hashed = mod.hashed_files()
+    fz = frozen(**{k: integrity.file_sha256(p) for k, p in hashed.items()})
+    _write_scores(make_scores(fz, shifts=PLANT), tmp_path / "scores")
+    fpath = tmp_path / "frozen_config.json"
+    fpath.write_text(json.dumps(fz), encoding="utf-8")
+    base = ["--frozen", str(fpath), "--scores-dir", str(tmp_path / "scores"),
+            "--out-dir", str(tmp_path / "out")]
+    with pytest.raises(SystemExit) as ei:        # synthetic files: no h1_choice, 30 items
+        mod.main(base)
+    assert "分數檔不完整" in str(ei.value.code)
+    assert not (tmp_path / "out").exists()
+    mod.main(base + ["--allow-incomplete"])
+    assert (tmp_path / "out" / "primary.csv").exists()
+
+
+def test_expected_rows_come_from_datasets():
+    mod = _load_script()
+    assert mod.expected_rows() == {"h1_rating": 144, "h1_choice": 144, "h2": 300}
+
+
+def test_score_code_guard(tmp_path, monkeypatch):
+    mod = _load_script()
+    hashed = mod.hashed_files()
+    fz = frozen(**{k: integrity.file_sha256(p) for k, p in hashed.items()})
+    _write_scores(make_scores(fz, shifts=PLANT), tmp_path / "scores")
+    fpath = tmp_path / "frozen_config.json"
+    fpath.write_text(json.dumps(fz), encoding="utf-8")
+    out = tmp_path / "out"
+    args = ["--frozen", str(fpath), "--scores-dir", str(tmp_path / "scores"),
+            "--out-dir", str(out), "--allow-incomplete"]
+    monkeypatch.setattr(mod, "score_code_changed", lambda: True)
+    with pytest.raises(SystemExit) as ei:
+        mod.main(args)
+    assert mod.SCORES_COMMIT in str(ei.value.code) and "allow-changed-analysis" in str(ei.value.code)
+    mod.main(args + ["--allow-changed-analysis"])
+    assert (out / "interpretation.md").read_text(encoding="utf-8").startswith("⚠")
+    # git unavailable: warn, do not crash, not labelled exploratory
+    monkeypatch.setattr(mod, "score_code_changed", lambda: None)
+    mod.main(args)
+    assert "⚠" not in (out / "interpretation.md").read_text(encoding="utf-8")
+
+
+def test_score_code_changed_git_results(monkeypatch):
+    mod = _load_script()
+
+    def fake(rc):
+        return lambda *a, **k: type("R", (), {"returncode": rc})()
+    for rc, want in ((0, False), (1, True), (128, None)):
+        monkeypatch.setattr(mod.subprocess, "run", fake(rc))
+        assert mod.score_code_changed() is want
+
+    def boom(*a, **k):
+        raise FileNotFoundError("git")
+    monkeypatch.setattr(mod.subprocess, "run", boom)
+    assert mod.score_code_changed() is None

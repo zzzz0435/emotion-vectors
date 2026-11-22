@@ -69,7 +69,9 @@ python scripts/6.2_emotion_vectors/08_checkpoint_examples.py --model qwen3-8b
 python scripts/6.5_calibration/01_generate_calibration.py --model qwen3-8b
 python scripts/6.5_calibration/02_measure_calibration.py --model qwen3-8b
 python scripts/6.5_calibration/03_select_and_freeze.py --model qwen3-8b
-python scripts/6.5_calibration/02_measure_calibration.py --model qwen3-8b --controls   # 對照向量的校準
+# 第一次執行 03 時，若還沒有對照向量的評分，03 會印出要執行的完整指令（已填好 --layer 與 --alpha）並以結束碼 3 離開；
+# 照那行指令執行即可。下面的 <L>、<α_max> 就是 03 印出的層與 α_max：
+python scripts/6.5_calibration/02_measure_calibration.py --model qwen3-8b --controls --layer <L> --alpha <α_max>   # 對照向量的校準
 python scripts/6.5_calibration/03_select_and_freeze.py --model qwen3-8b
 python scripts/6.5_calibration/04_checkpoint2.py --model qwen3-8b                       # 檢查點 2 摘要
 
