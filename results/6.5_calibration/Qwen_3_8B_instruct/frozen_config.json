@@ -1,0 +1,165 @@
+{
+  "model": "Qwen_3_8B_instruct",
+  "layer": 23,
+  "resid_norm": 196.98463349376038,
+  "alpha_max": 0.6,
+  "alpha_eq": {
+    "anger": 0.5171,
+    "fear": 0.4851,
+    "sadness": 0.5536,
+    "joy": 0.7,
+    "compassion": 0.617,
+    "pain": 0.54
+  },
+  "alpha_eq_target": 1.6211289998054088,
+  "alpha_individual": {},
+  "induction": {
+    "anger": "ok",
+    "fear": "ok",
+    "sadness": "ok",
+    "joy": "ok",
+    "compassion": "ok",
+    "pain": "ok"
+  },
+  "induction_detail": {
+    "anger": {
+      "status": "ok",
+      "alpha": 0.6,
+      "gain": 2.221153728989998,
+      "rating": 3.2274311886410345,
+      "p95": 1.1371228127898496
+    },
+    "fear": {
+      "status": "ok",
+      "alpha": 0.6,
+      "gain": 2.830749869743413,
+      "rating": 3.88223190831845,
+      "p95": 1.6656799614150832
+    },
+    "sadness": {
+      "status": "ok",
+      "alpha": 0.6,
+      "gain": 1.924741698248057,
+      "rating": 3.190935798187265,
+      "p95": 2.4602833811285776
+    },
+    "joy": {
+      "status": "ok",
+      "alpha": 0.6,
+      "gain": 1.5231263302022908,
+      "rating": 4.7042120836270405,
+      "p95": 3.857349809205256
+    },
+    "compassion": {
+      "status": "ok",
+      "alpha": 0.6,
+      "gain": 1.5960612372801026,
+      "rating": 3.451329176708583,
+      "p95": 2.430785012410325
+    },
+    "pain": {
+      "status": "ok",
+      "alpha": 0.6,
+      "gain": 2.4214289815167804,
+      "rating": 3.5395855959305833,
+      "p95": 1.7706665947661688
+    }
+  },
+  "coherent_max": {
+    "anger": 0.6,
+    "fear": 0.7,
+    "sadness": 0.8,
+    "joy": 0.7,
+    "compassion": 0.8,
+    "pain": 0.7
+  },
+  "thresholds": {
+    "format_min": 0.9,
+    "fluency_drop": 0.5,
+    "induction_gain": 1.0,
+    "control_percentile": 95,
+    "eq_target_max": 2.0,
+    "holm_alpha": 0.05,
+    "gate_need": 38,
+    "bootstrap_n": 10000,
+    "seed": 42
+  },
+  "grid": [
+    0.1,
+    0.2,
+    0.3,
+    0.4,
+    0.5,
+    0.6,
+    0.7,
+    0.8,
+    1.0,
+    1.3,
+    1.6,
+    2.0
+  ],
+  "contamination_at_layer": [],
+  "separability_at_layer": {
+    "auroc": 1.0,
+    "passed": true
+  },
+  "residual_status_at_layer": {
+    "anger__resid3": "ok",
+    "anger__resid2": "ok",
+    "pain__resid3": "ok",
+    "compassion__resid3": "ok"
+  },
+  "residual_removed_axes": {
+    "anger__resid3": [
+      "V",
+      "D"
+    ],
+    "anger__resid2": [
+      "V"
+    ],
+    "pain__resid3": [
+      "V",
+      "A",
+      "D"
+    ],
+    "compassion__resid3": [
+      "V",
+      "A",
+      "D"
+    ]
+  },
+  "layer_table": [
+    {
+      "layer": 9,
+      "alpha_max": 0.5,
+      "mean_gain": 0.6185824707424268,
+      "n_flagged": 1
+    },
+    {
+      "layer": 14,
+      "alpha_max": 0.4,
+      "mean_gain": 0.981290715315715,
+      "n_flagged": 4
+    },
+    {
+      "layer": 18,
+      "alpha_max": 0.4,
+      "mean_gain": 0.9174821478610854,
+      "n_flagged": 0
+    },
+    {
+      "layer": 23,
+      "alpha_max": 0.6,
+      "mean_gain": 2.0862103076634404,
+      "n_flagged": 0
+    }
+  ],
+  "stats_sha256": "0ff137fc6622cea5299b317cf1144b2aa7e51be210c1c48531642c1c4866879b",
+  "conditions_sha256": "a6115b1d080f2e5b6be0ceabafe3e3441e7e3b4e5df68f679079c52b066280db",
+  "concepts_sha256": "76209eaf92d812b3e7de6486e979ec114d61e31bb5625fa6f595a9e20d137935",
+  "vignettes_sha256": "b63e62894d89a440f059e779e09c3280e8acbd5fa13101733b5708dcf01343d9",
+  "moralchoice_sha256": "4d99810aeaa36aea0690e664d310ca9d1c86accd8c8674e9913c35b60849a1f9",
+  "git_commit": "46df8464ddc3153e3d1049ac63ca6760fd12ec88",
+  "created_at": "2026-11-22T08:04:27+00:00",
+  "coherence_rule": "通順＝格式題有效答案機率總和 ≥ 0.9，且未調整的主模型給文字打的通順程度（1–5 分）平均不低於未調整時減 0.5 分；困惑度比只記錄、不作門檻（2026-11-22 修訂，在任何道德題資料產生之前）。"
+}

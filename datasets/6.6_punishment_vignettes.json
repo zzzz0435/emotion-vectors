@@ -1,0 +1,650 @@
+[
+  {
+    "id": "theft_minor_0",
+    "offense": "theft",
+    "severity": "minor",
+    "variant": 0,
+    "text": "Jordan, a college student, walked out of a clothing store wearing a jacket priced at $40 without paying. A security guard stopped Jordan at the entrance, and the jacket was recovered intact. Jordan had no prior record. The store's manager reported the incident to the police, and Jordan was identified on camera footage. Jordan told officers that the jacket had been taken on impulse and that there was enough money in the bank account to cover the price.",
+    "lenient": "A formal warning and repaying the $40.",
+    "harsh": "Thirty days in jail and a criminal record."
+  },
+  {
+    "id": "theft_minor_1",
+    "offense": "theft",
+    "severity": "minor",
+    "variant": 1,
+    "text": "Sam, a seventeen-year-old, took a phone charger worth $12 from a display shelf at an electronics store and put it in a backpack. The store's clerk noticed it at the exit and asked Sam to return it. Sam handed it back immediately. Sam had visited the store several times before and had never been involved in any incident. The clerk called the police, who recorded the report and asked the store whether it wished to press charges.",
+    "lenient": "A verbal warning and a ban from the store for a month.",
+    "harsh": "Sixty days in juvenile detention and a permanent record."
+  },
+  {
+    "id": "theft_minor_2",
+    "offense": "theft",
+    "severity": "minor",
+    "variant": 2,
+    "text": "Alex, an office worker, regularly took pens, notebooks and printer paper home from the supply cabinet, worth about $30 in total over two months. An inventory check showed the shortfall. When the office manager asked about it, Alex confirmed taking the items and returned what remained. Alex had worked at the company for six years without any disciplinary matters, and the company's policy listed supply theft as a reportable offense.",
+    "lenient": "A written warning and repaying $30 to the company.",
+    "harsh": "Immediate dismissal and a report to the police for prosecution."
+  },
+  {
+    "id": "theft_minor_3",
+    "offense": "theft",
+    "severity": "minor",
+    "variant": 3,
+    "text": "Casey, a neighbor, picked a bag of tomatoes worth about $25 from a raised garden bed in the front yard of a house down the street while the owners were away. A doorbell camera recorded the act, and the owners showed the video to Casey the next day. Casey admitted taking the tomatoes and offered to pay for them. The owners had to decide whether to take the matter any further.",
+    "lenient": "Paying $25 and a written note acknowledging the taking.",
+    "harsh": "Six months in jail and a theft conviction on record."
+  },
+  {
+    "id": "theft_moderate_0",
+    "offense": "theft",
+    "severity": "moderate",
+    "variant": 0,
+    "text": "Morgan, a temporary worker at an accounting firm, took a laptop worth $2,500 from a colleague's desk after hours and sold it to a pawn shop for $400. The firm's cameras showed Morgan leaving the building with a bag at 9 p.m. The pawn shop's records led the police to Morgan within a week. The laptop was recovered, though its data had been wiped. Morgan had one earlier conviction for shoplifting, four years before.",
+    "lenient": "A fine of $500, repayment of the pawn shop fee, and one year of probation.",
+    "harsh": "Three years in prison and a felony record."
+  },
+  {
+    "id": "theft_moderate_1",
+    "offense": "theft",
+    "severity": "moderate",
+    "variant": 1,
+    "text": "Taylor cut the lock on a bicycle rack outside a train station and rode away on a bicycle worth $900. The owner had locked it there that morning before work. Taylor later posted it for sale online, and a buyer who recognised the listing from a theft report contacted the police. The bicycle was returned with a bent wheel that cost $120 to repair. Taylor had no earlier convictions.",
+    "lenient": "Community service and repaying $120 for the repair.",
+    "harsh": "Two years in prison and a felony record."
+  },
+  {
+    "id": "theft_moderate_2",
+    "offense": "theft",
+    "severity": "moderate",
+    "variant": 2,
+    "text": "Riley, a cashier at a grocery store, took $1,800 in cash from the register over the course of three weeks by leaving some sales unrecorded. A routine audit found the totals did not match, and video of the till showed the pattern. Riley admitted the taking when shown the footage. The store was able to recover none of the money. Riley had been employed there for eight months and had no previous record.",
+    "lenient": "Repaying $1,800 in instalments and probation.",
+    "harsh": "Four years in prison and a felony record."
+  },
+  {
+    "id": "theft_moderate_3",
+    "offense": "theft",
+    "severity": "moderate",
+    "variant": 3,
+    "text": "Drew removed the catalytic converters from three parked cars in a residential street one night, using a battery-powered saw. The parts were sold to a scrap dealer for $600 each, while each owner faced a repair bill of about $1,500. A neighbor's security camera recorded the vehicle Drew used, and the plate led to an arrest two days later. Drew had no prior record.",
+    "lenient": "A fine, repayment of the repair costs, and one year of probation.",
+    "harsh": "Five years in prison and a felony record."
+  },
+  {
+    "id": "theft_severe_0",
+    "offense": "theft",
+    "severity": "severe",
+    "variant": 0,
+    "text": "Pat broke into a family's home while they were on vacation and took jewelry, electronics and cash worth about $30,000. Some of the jewelry had belonged to the family for several generations and could not be replaced. Fingerprints at the point of entry matched Pat's, which were on file from a burglary conviction six years earlier. Most of the items had already been sold by the time Pat was arrested, and only a small part was recovered.",
+    "lenient": "Two years in prison and a restitution order.",
+    "harsh": "Fifteen years in prison with no early release."
+  },
+  {
+    "id": "theft_severe_1",
+    "offense": "theft",
+    "severity": "severe",
+    "variant": 1,
+    "text": "Jamie led a group that broke into a construction site on eleven separate nights and removed copper wire, tools and heavy equipment worth $80,000. The thefts delayed the building of a school by four months. The group sold the materials to scrap dealers in several towns. Police traced the sales through dealer records and arrested five people. Jamie had previously served time for a similar offense and had been released a year before.",
+    "lenient": "Three years in prison and a restitution order.",
+    "harsh": "Twenty years in prison with no early release."
+  },
+  {
+    "id": "theft_severe_2",
+    "offense": "theft",
+    "severity": "severe",
+    "variant": 2,
+    "text": "Chris, a truck driver, diverted a delivery truck carrying $120,000 worth of medical supplies to a private warehouse and sold the cargo to buyers abroad. A hospital waited eleven days for an urgent replacement shipment, and several scheduled procedures were postponed. Tracking data from the truck showed the detour. Chris had worked for the carrier for nine years before the incident and had no earlier convictions.",
+    "lenient": "Two years of home confinement and repayment of the cargo value.",
+    "harsh": "Twelve years in prison with no early release."
+  },
+  {
+    "id": "theft_severe_3",
+    "offense": "theft",
+    "severity": "severe",
+    "variant": 3,
+    "text": "Quinn entered a pharmacy through a back window at night on four occasions and took prescription medication and cash worth $60,000 in total. On the final night, Quinn also stole the store's safe, which held the weekly takings and the records of several customers. An alarm company's logs and a recording from a nearby shop identified the vehicle. Quinn was arrested with part of the medication still in the car.",
+    "lenient": "Three years in prison and a restitution order.",
+    "harsh": "Eighteen years in prison with no early release."
+  },
+  {
+    "id": "fraud_minor_0",
+    "offense": "fraud",
+    "severity": "minor",
+    "variant": 0,
+    "text": "Robin used a photocopied coupon for $30 off a grocery order at a supermarket's self-checkout. The coupon had been printed from a website that offered fake vouchers. The supermarket's scanner flagged the barcode as invalid, and a store attendant checked the receipt. Robin confirmed the coupon was copied and paid the full price on the spot. Robin was a regular customer with no history of any incident.",
+    "lenient": "A warning and paying the $30 difference.",
+    "harsh": "Ninety days in jail and a fraud conviction."
+  },
+  {
+    "id": "fraud_minor_1",
+    "offense": "fraud",
+    "severity": "minor",
+    "variant": 1,
+    "text": "Kai sold a photocopy of a concert ticket to a buyer on a classifieds site for $50 and kept the original to use at the door. When the buyer arrived at the venue, the staff scanned the code and found it had already been used by Kai. The buyer was refused entry and contacted the police the next day. Kai refunded the $50 when contacted, and had never sold tickets before.",
+    "lenient": "A formal warning and a $50 refund.",
+    "harsh": "Six months in jail and a fraud conviction."
+  },
+  {
+    "id": "fraud_minor_2",
+    "offense": "fraud",
+    "severity": "minor",
+    "variant": 2,
+    "text": "Avery asked an online retailer for a $45 refund by claiming a package had never been delivered. The delivery company's records showed a signature for the parcel at Avery's address two days earlier. The retailer cancelled the refund and reported the claim. Avery acknowledged keeping the item and offered to return the refund. Avery had made no other claims with the company during five years as a customer.",
+    "lenient": "Repaying $45 and a warning.",
+    "harsh": "One year in jail and a fraud conviction."
+  },
+  {
+    "id": "fraud_minor_3",
+    "offense": "fraud",
+    "severity": "minor",
+    "variant": 3,
+    "text": "Blake, a salesperson, added $60 of personal meals to a travel expense report and described them as client dinners. An accountant compared the receipts with the calendar and found no client meetings on those dates. Blake paid the amount back when asked and said it had been an error of judgment. The company's code of conduct required any false expense entry to be reported to a manager.",
+    "lenient": "A written warning and repaying $60.",
+    "harsh": "Dismissal and a criminal charge for fraud."
+  },
+  {
+    "id": "fraud_moderate_0",
+    "offense": "fraud",
+    "severity": "moderate",
+    "variant": 0,
+    "text": "Hayden filed an insurance claim for $6,000, stating that jewelry had been stolen from a car. An investigator found that the jewelry had been sold at a pawn shop three weeks before the reported theft. The insurer refused the claim and informed the police. Hayden had held the policy for ten years and had made one small claim earlier. Hayden later confirmed that the claim had been made up.",
+    "lenient": "A fine and one year of probation.",
+    "harsh": "Five years in prison and a felony record."
+  },
+  {
+    "id": "fraud_moderate_1",
+    "offense": "fraud",
+    "severity": "moderate",
+    "variant": 1,
+    "text": "Sasha advertised a used car on a classifieds site for $4,500 and accepted a bank transfer from a buyer. The car did not exist, and the photographs had been taken from another seller's listing. Sasha used the same listing with two other buyers, who were each asked for deposits of $500. The buyer contacted the bank, and the account was traced to Sasha, who returned a small part of the money.",
+    "lenient": "Full repayment to all three buyers and two years of probation.",
+    "harsh": "Six years in prison and a felony record."
+  },
+  {
+    "id": "fraud_moderate_2",
+    "offense": "fraud",
+    "severity": "moderate",
+    "variant": 2,
+    "text": "Devon, a warehouse employee, falsified time sheets for ten months by recording eight hours on days when Devon worked only five or six. The overpayment totalled about $8,000. A payroll audit compared the sheets with the door-entry logs and found the differences. Devon was confronted with the records and acknowledged the entries. There was no earlier disciplinary record in seven years of employment.",
+    "lenient": "Repayment in instalments and a final written warning.",
+    "harsh": "Four years in prison and a felony record."
+  },
+  {
+    "id": "fraud_moderate_3",
+    "offense": "fraud",
+    "severity": "moderate",
+    "variant": 3,
+    "text": "Corey set up a website collecting donations for a children's sports league that did not exist, and received $7,000 from forty-two donors over six months. The website's payment account was linked to Corey's own bank account. When a donor asked the local council about the league, the council found no record of it. Corey had no earlier convictions and spent most of the money on rent and a vehicle.",
+    "lenient": "Full repayment to donors and two years of probation.",
+    "harsh": "Seven years in prison and a felony record."
+  },
+  {
+    "id": "fraud_severe_0",
+    "offense": "fraud",
+    "severity": "severe",
+    "variant": 0,
+    "text": "Marlow ran an investment fund that promised returns of 12 percent a year. Over six years, 210 investors placed a total of $2 million in it. Marlow paid early investors with money from newer ones and used about $900,000 for personal expenses, including a house and a boat. When many investors asked to withdraw their money at the same time, the fund did not have enough to pay them. Marlow had no earlier convictions.",
+    "lenient": "Four years in prison and a restitution order.",
+    "harsh": "Thirty years in prison with no early release."
+  },
+  {
+    "id": "fraud_severe_1",
+    "offense": "fraud",
+    "severity": "severe",
+    "variant": 1,
+    "text": "Ellis, a mortgage broker, forged income documents and property valuations for 38 mortgage applications over three years, helping borrowers obtain loans of about $400,000 in total beyond what they qualified for. Many of the loans later defaulted. The lenders lost roughly $2.6 million, and 12 properties were repossessed. An audit by a bank found matching handwriting on the forms, and Ellis was arrested at the office.",
+    "lenient": "Three years in prison and a restitution order.",
+    "harsh": "Twenty-five years in prison with no early release."
+  },
+  {
+    "id": "fraud_severe_2",
+    "offense": "fraud",
+    "severity": "severe",
+    "variant": 2,
+    "text": "Lee, who ran a medical clinic, sent false bills to a government health program for treatments never given, totalling $900,000 across four years. Patient files were altered to match the claims, and two employees were told to sign them. An auditor noticed that the clinic billed for more procedures than its equipment and staff could have carried out. Lee had previously been fined by the program for a minor billing error.",
+    "lenient": "Five years in prison and a restitution order.",
+    "harsh": "Thirty years in prison with no early release."
+  },
+  {
+    "id": "fraud_severe_3",
+    "offense": "fraud",
+    "severity": "severe",
+    "variant": 3,
+    "text": "Noel contacted forty retirees by telephone and persuaded them to move savings totalling $1.5 million into a company that held no assets. Noel gave them documents with forged signatures and invented account statements. The retirees lost nearly all of their savings, and several had to sell their homes. Investigators found the funds had been transferred to accounts abroad, and Noel was arrested at an airport.",
+    "lenient": "Five years in prison and a restitution order.",
+    "harsh": "Thirty-five years in prison with no early release."
+  },
+  {
+    "id": "assault_minor_0",
+    "offense": "assault",
+    "severity": "minor",
+    "variant": 0,
+    "text": "During an argument at a bar over a spilled drink, Mika shoved another customer in the chest with both hands. The customer stepped back into a table, steadied himself and was not injured. Bar staff separated the two, and Mika left the premises when asked. The customer reported the incident to a police officer outside, who recorded a statement. Mika had no earlier convictions and had been drinking for about two hours.",
+    "lenient": "A warning and a short conflict-management course.",
+    "harsh": "One year in prison and a violent-offense record."
+  },
+  {
+    "id": "assault_minor_1",
+    "offense": "assault",
+    "severity": "minor",
+    "variant": 1,
+    "text": "At a school playground, Ren, a fifteen-year-old, pushed a classmate to the ground during a dispute over a ball. The classmate had a scraped elbow and a bruise on one knee, which a teacher cleaned and covered with a plaster. Ren admitted to the push when asked by the principal. Ren had been disciplined once before for being late to class, and no other incidents involving physical contact were recorded.",
+    "lenient": "An apology and one day of school suspension.",
+    "harsh": "Expulsion and six months in juvenile detention."
+  },
+  {
+    "id": "assault_minor_2",
+    "offense": "assault",
+    "severity": "minor",
+    "variant": 2,
+    "text": "Frankie, who was waiting in a queue at a cinema, slapped the arm of the man ahead after he stepped back onto Frankie's foot. The man had a red mark on his forearm that faded within the hour. He did not seek medical attention. Other people in the queue described the slap to the cinema staff, who contacted the police. Frankie had no record and left the cinema before the officers arrived.",
+    "lenient": "A caution and a $100 fine.",
+    "harsh": "Eighteen months in prison and a violent-offense record."
+  },
+  {
+    "id": "assault_minor_3",
+    "offense": "assault",
+    "severity": "minor",
+    "variant": 3,
+    "text": "Tracy threw a cup of cold coffee at a delivery driver who had parked in front of Tracy's garage. The coffee soaked the driver's jacket but did not cause any injury. The driver filmed the incident on a phone and sent the video to the police. Tracy admitted the act and offered to pay for the dry cleaning of the jacket, which cost $18. Tracy had no prior convictions.",
+    "lenient": "A warning and paying $18 for cleaning.",
+    "harsh": "One year in prison and a violent-offense record."
+  },
+  {
+    "id": "assault_moderate_0",
+    "offense": "assault",
+    "severity": "moderate",
+    "variant": 0,
+    "text": "Following a dispute in a parking lot, Dale punched a stranger once in the face. The stranger fell and his nose was broken, which required surgery to set. He missed two weeks of work and had a scar across the bridge of the nose. A witness took a photograph of Dale's license plate, and the police arrested Dale at home the following morning. Dale had a conviction for disorderly conduct from five years earlier.",
+    "lenient": "One year of probation, conflict-management classes, and paying the medical bills.",
+    "harsh": "Six years in prison and a violent-offense record."
+  },
+  {
+    "id": "assault_moderate_1",
+    "offense": "assault",
+    "severity": "moderate",
+    "variant": 1,
+    "text": "Jesse kicked a man who was lying on the pavement outside a nightclub after the man had tried to take Jesse's coat. The kick struck his arm and broke the wrist, and he was taken to hospital where a cast was fitted. Security cameras showed the whole sequence. Jesse was arrested the same evening and had no earlier convictions. The injured man was unable to work as an electrician for ten weeks.",
+    "lenient": "Six months of home confinement and paying compensation.",
+    "harsh": "Five years in prison and a violent-offense record."
+  },
+  {
+    "id": "assault_moderate_2",
+    "offense": "assault",
+    "severity": "moderate",
+    "variant": 2,
+    "text": "During a football match between two local clubs, Camden struck an opposing player on the head with a glass bottle taken from the sideline. The player needed fourteen stitches and was kept in hospital overnight. Match officials stopped the game, and the police interviewed several witnesses. Camden had been banned from a stadium once before for entering the pitch. The player returned to training after five weeks.",
+    "lenient": "A suspended sentence and a three-year ban from matches.",
+    "harsh": "Seven years in prison and a violent-offense record."
+  },
+  {
+    "id": "assault_moderate_3",
+    "offense": "assault",
+    "severity": "moderate",
+    "variant": 3,
+    "text": "Harper hit a roommate on the forearm with a wooden baseball bat during an argument over rent. The forearm was fractured in two places, and the roommate wore a cast for eight weeks and could not carry out his work as a mover during that time. Harper called an ambulance after the blow and stayed at the apartment until it arrived. Harper had no earlier criminal record.",
+    "lenient": "One year of probation and paying the medical bills.",
+    "harsh": "Six years in prison and a violent-offense record."
+  },
+  {
+    "id": "assault_severe_0",
+    "offense": "assault",
+    "severity": "severe",
+    "variant": 0,
+    "text": "After a dispute over a debt, Bryn stabbed a man three times with a kitchen knife outside an apartment building. He was taken to hospital and required emergency surgery and three weeks of inpatient care. A damaged nerve left him without the use of his left hand permanently. Bryn left the scene but was identified from the building's cameras and arrested the next day. Bryn had a conviction for assault with a weapon eight years before.",
+    "lenient": "Five years in prison and paying compensation.",
+    "harsh": "Twenty-five years in prison with no early release."
+  },
+  {
+    "id": "assault_severe_1",
+    "offense": "assault",
+    "severity": "severe",
+    "variant": 1,
+    "text": "A group led by Sloane attacked a man in an alleyway, striking him repeatedly with fists and boots after he refused to hand over his phone. He was found unconscious and remained in a coma for two weeks. After he awoke, he needed eight months of therapy to walk and speak normally, and he did not return to his job. Sloane was arrested following witness statements and camera footage.",
+    "lenient": "Six years in prison and paying compensation.",
+    "harsh": "Twenty years in prison with no early release."
+  },
+  {
+    "id": "assault_severe_2",
+    "offense": "assault",
+    "severity": "severe",
+    "variant": 2,
+    "text": "Wynn fired a handgun at a neighbor during a dispute over a boundary fence, hitting him in the leg. The bullet shattered the thigh bone, and he underwent four operations over a year and now walks with a cane. Wynn called the police and handed over the weapon at the door. The firearm was unlicensed. Wynn was retired and had never been arrested before.",
+    "lenient": "Seven years in prison and paying compensation.",
+    "harsh": "Twenty-five years in prison with no early release."
+  },
+  {
+    "id": "assault_severe_3",
+    "offense": "assault",
+    "severity": "severe",
+    "variant": 3,
+    "text": "Leigh attacked a taxi driver from behind with a steel crowbar after being told the fare. The driver's skull was fractured in two places, and he spent two months in hospital, including a week in intensive care. He now has lasting memory loss and cannot drive. Leigh was found at a friend's house two days afterwards. Leigh had one earlier conviction for a violent offense.",
+    "lenient": "Six years in prison and paying compensation.",
+    "harsh": "Thirty years in prison with no early release."
+  },
+  {
+    "id": "vandalism_minor_0",
+    "offense": "vandalism",
+    "severity": "minor",
+    "variant": 0,
+    "text": "Eli sprayed a small tag in black paint on the side of a bus shelter at night. A cleaning crew removed it the next day using solvent, at a cost of $80 to the city. A camera on a nearby building recorded the act, and Eli was identified by a teacher who recognised the jacket. Eli was nineteen and had no earlier incidents with the police.",
+    "lenient": "Paying $80 and a warning.",
+    "harsh": "One year in prison and a criminal record."
+  },
+  {
+    "id": "vandalism_minor_1",
+    "offense": "vandalism",
+    "severity": "minor",
+    "variant": 1,
+    "text": "Nico scratched a long line along the paint of a neighbor's mailbox using a house key while walking home. The neighbor noticed it the next morning and checked the footage from a doorbell camera, which showed Nico clearly. Repainting the mailbox cost $35. Nico admitted the act when the neighbor knocked on the door and offered to cover the cost. There was no history of disputes between the two households.",
+    "lenient": "Repainting the mailbox and a written apology.",
+    "harsh": "Six months in jail and a criminal record."
+  },
+  {
+    "id": "vandalism_minor_2",
+    "offense": "vandalism",
+    "severity": "minor",
+    "variant": 2,
+    "text": "Sky let the air out of the front tires of a car parked outside a school, which belonged to a teacher. The teacher inflated the tires at a nearby station that morning and was twenty minutes late to the first class. No damage was done to the car. A school camera showed Sky approaching the car and kneeling by each wheel. Sky was fifteen and had not been in trouble before.",
+    "lenient": "A detention and a conversation with the principal.",
+    "harsh": "One year in juvenile detention and a record."
+  },
+  {
+    "id": "vandalism_minor_3",
+    "offense": "vandalism",
+    "severity": "minor",
+    "variant": 3,
+    "text": "Rowan kicked over four plant pots outside a bakery at closing time, breaking two of them. The owner swept up the soil and replaced the broken pots, which cost $40. A passer-by who saw the incident gave the owner Rowan's description, and the owner identified Rowan later in the week at a bus stop. Rowan had been cautioned once for a minor public-order matter two years before.",
+    "lenient": "Paying $40 and a warning.",
+    "harsh": "One year in jail and a criminal record."
+  },
+  {
+    "id": "vandalism_moderate_0",
+    "offense": "vandalism",
+    "severity": "moderate",
+    "variant": 0,
+    "text": "Parker threw bricks through six ground-floor windows of a secondary school one night. Replacing the glass and repairing two frames cost the school $4,000, and classes in two rooms were moved for a week. Police found Parker's phone near the school's fence, and Parker was arrested the following day. Parker was twenty-one and had one earlier caution for a minor offense.",
+    "lenient": "Repaying $4,000 and one year of probation.",
+    "harsh": "Five years in prison and a criminal record."
+  },
+  {
+    "id": "vandalism_moderate_1",
+    "offense": "vandalism",
+    "severity": "moderate",
+    "variant": 1,
+    "text": "Ash sprayed paint across the doors and roof of a parked car, using three cans of red paint, after a dispute with its owner over a parking space. The professional respray cost $3,000. A resident saw Ash leave the area with paint on his hands and passed the details to the police. Ash admitted the act during questioning and had no earlier convictions.",
+    "lenient": "Repaying $3,000 and community service.",
+    "harsh": "Four years in prison and a criminal record."
+  },
+  {
+    "id": "vandalism_moderate_2",
+    "offense": "vandalism",
+    "severity": "moderate",
+    "variant": 2,
+    "text": "Zion and two friends pulled over a bronze statue in a public park by tying a rope to it and driving away with a truck. The statue broke in two, and its repair and reinstallation cost the city $5,000. Park staff reviewed footage from the entrance and found the truck's plate. All three were arrested within a week. Zion had no earlier record.",
+    "lenient": "Repaying a share of the $5,000 and community service.",
+    "harsh": "Five years in prison and a criminal record."
+  },
+  {
+    "id": "vandalism_moderate_3",
+    "offense": "vandalism",
+    "severity": "moderate",
+    "variant": 3,
+    "text": "Marley slashed the tires of five cars parked on a residential street, using a utility knife. Each owner needed new tires, and the total cost was about $2,500. Several residents had to take time off work to arrange repairs. A neighbor's camera showed Marley moving from car to car. Marley, a former tenant on the street, had been evicted from the building a month before.",
+    "lenient": "Repaying $2,500 and one year of probation.",
+    "harsh": "Four years in prison and a criminal record."
+  },
+  {
+    "id": "vandalism_severe_0",
+    "offense": "vandalism",
+    "severity": "severe",
+    "variant": 0,
+    "text": "Vale poured petrol around the walls of a furniture storage building and lit it. The fire burned through the roof and destroyed the stock, causing about $200,000 of damage. Two firefighters were treated for smoke inhalation, and the neighboring units were closed for a week. Vale was arrested after fuel residue was found on clothing and a gas-station camera showed Vale buying the petrol that evening. Vale had no earlier arson convictions.",
+    "lenient": "Four years in prison and a restitution order.",
+    "harsh": "Twenty years in prison with no early release."
+  },
+  {
+    "id": "vandalism_severe_1",
+    "offense": "vandalism",
+    "severity": "severe",
+    "variant": 1,
+    "text": "Orion painted over a large historic mural in a town square with grey paint, using rollers and ladders over a single night. The mural had been completed in 1952 and had been valued at $150,000. Specialists later said that the original could not be restored. Orion was identified from a hardware-store receipt and the paint found at home. Orion had no earlier convictions.",
+    "lenient": "Three years in prison and repayment over time.",
+    "harsh": "Fifteen years in prison with no early release."
+  },
+  {
+    "id": "vandalism_severe_2",
+    "offense": "vandalism",
+    "severity": "severe",
+    "variant": 2,
+    "text": "Dana, a former technician dismissed the previous year, broke into a university laboratory late at night and smashed microscopes, a mass spectrometer and several computers with a hammer. The damage totalled $300,000, and ongoing research projects were suspended for a semester. Security footage showed Dana entering with the old access card. The laboratory had no alarm on its door, and Dana had kept an old access card after leaving the university.",
+    "lenient": "Four years in prison and a restitution order.",
+    "harsh": "Eighteen years in prison with no early release."
+  },
+  {
+    "id": "vandalism_severe_3",
+    "offense": "vandalism",
+    "severity": "severe",
+    "variant": 3,
+    "text": "Indy blocked the drains in the basement of a public library and left the taps running over a weekend. The water reached the ground floor and ruined about 9,000 books and the building's electrical system. Repair and replacement costs came to $250,000, and the library closed for five months. Indy was found by comparing a door log with the library's membership records, and had no earlier convictions.",
+    "lenient": "Three years in prison and a restitution order.",
+    "harsh": "Fifteen years in prison with no early release."
+  },
+  {
+    "id": "negligent_injury_minor_0",
+    "offense": "negligent_injury",
+    "severity": "minor",
+    "variant": 0,
+    "text": "Ollie was riding a bicycle on a pavement outside a shopping centre, where cycling was not allowed, and clipped a pedestrian's elbow. The pedestrian stumbled but stayed on his feet, and he had a graze on the arm that needed only a wipe and a plaster. Ollie stopped, gave a name and phone number, and waited until the pedestrian said he did not need help. Ollie had no earlier traffic offenses.",
+    "lenient": "A warning and paying a $20 fine.",
+    "harsh": "One year in prison and a criminal record."
+  },
+  {
+    "id": "negligent_injury_minor_1",
+    "offense": "negligent_injury",
+    "severity": "minor",
+    "variant": 1,
+    "text": "A shop assistant named Peyton stacked a box of tinned goods on the edge of a high shelf, and the box fell onto a customer's shoulder. The customer had a bruise and declined medical care. The store's manager completed an incident report, and the customer later asked the store to review its shelf rules. Peyton had been trained on safe stacking and had worked at the store for two years without any previous incident.",
+    "lenient": "Retraining and a written warning.",
+    "harsh": "Six months in jail and a criminal record."
+  },
+  {
+    "id": "negligent_injury_minor_2",
+    "offense": "negligent_injury",
+    "severity": "minor",
+    "variant": 2,
+    "text": "Reese left a garden rake lying with its prongs up on a path leading to the front door of a rented house. A visitor tripped over it and fell on the path, scraping both palms. The visitor cleaned the cuts at home and did not attend a clinic. Reese had been told about the rake by the visitor's earlier comment but had not moved it. Reese had no previous incidents.",
+    "lenient": "A warning and paying a $50 fine.",
+    "harsh": "One year in prison and a criminal record."
+  },
+  {
+    "id": "negligent_injury_minor_3",
+    "offense": "negligent_injury",
+    "severity": "minor",
+    "variant": 3,
+    "text": "Shiloh was walking a dog without a lead in a public park where a lead was required. The dog ran into the path of a jogger, who fell and scraped both elbows and a knee. The jogger washed the cuts at a water fountain and did not seek treatment. Shiloh apologised, gave contact details and paid for a replacement pair of the jogger's torn trousers, which cost $40.",
+    "lenient": "A warning and paying a $100 fine.",
+    "harsh": "One year in prison and a criminal record."
+  },
+  {
+    "id": "negligent_injury_moderate_0",
+    "offense": "negligent_injury",
+    "severity": "moderate",
+    "variant": 0,
+    "text": "Gray, driving to work, looked at a phone message while approaching a junction and did not see that the car ahead had stopped. The car struck the rear of the vehicle at about 30 miles per hour. The passenger of the other car, a woman in her fifties, sustained a broken collarbone and was treated in hospital for two days. She was unable to work for nine weeks. Gray had two earlier speeding fines.",
+    "lenient": "A fine, a six-month driving ban and paying the medical bills.",
+    "harsh": "Five years in prison and a lifetime driving ban."
+  },
+  {
+    "id": "negligent_injury_moderate_1",
+    "offense": "negligent_injury",
+    "severity": "moderate",
+    "variant": 1,
+    "text": "Kendall, a contractor, left a scaffolding plank on an upper level without fixing it in place at the end of a working day. During the night, wind moved it, and it fell on a worker arriving early the next morning. The worker's arm was broken in two places, and he spent three days in hospital. A safety inspector found no record of a daily check. Kendall had worked in construction for eleven years without a prior incident.",
+    "lenient": "A fine and a one-year suspension of the contractor's licence.",
+    "harsh": "Five years in prison and a permanent ban from construction."
+  },
+  {
+    "id": "negligent_injury_moderate_2",
+    "offense": "negligent_injury",
+    "severity": "moderate",
+    "variant": 2,
+    "text": "Landry owned a small apartment building and was told by a tenant in March that a stair tread on the second-floor landing was cracked. Landry did not fix it for five months. In August the tread gave way under another tenant, who fell and broke an ankle. The tenant spent two nights in hospital and walked with crutches for two months. Landry had owned the building for twenty years.",
+    "lenient": "A fine and paying the tenant's medical costs.",
+    "harsh": "Four years in prison and loss of the property."
+  },
+  {
+    "id": "negligent_injury_moderate_3",
+    "offense": "negligent_injury",
+    "severity": "moderate",
+    "variant": 3,
+    "text": "Emery, a babysitter, left a pot of boiling water on the stove with the handle turned outward and went to answer the front door. A four-year-old child pulled the pot and the water spilled across his arm and chest. The child was treated at a burns unit for six days and needed skin grafts. Emery called an ambulance immediately and gave first aid. Emery was nineteen and had cared for the child for two years.",
+    "lenient": "A suspended sentence and community service.",
+    "harsh": "Six years in prison and a ban from childcare work."
+  },
+  {
+    "id": "negligent_injury_severe_0",
+    "offense": "negligent_injury",
+    "severity": "severe",
+    "variant": 0,
+    "text": "Sutton, a delivery driver, was reading a text message when the truck went through a red light and struck a pedestrian crossing the street. The pedestrian, a man of 34, died at the scene. Traffic camera footage showed that Sutton did not brake before the impact. Phone records confirmed the message had been opened seconds earlier. Sutton had a license with no previous points and stopped immediately, calling the emergency services.",
+    "lenient": "Two years of probation and a five-year driving ban.",
+    "harsh": "Fifteen years in prison and a lifetime driving ban."
+  },
+  {
+    "id": "negligent_injury_severe_1",
+    "offense": "negligent_injury",
+    "severity": "severe",
+    "variant": 1,
+    "text": "Mercer, the manager of a metal-stamping plant, was told in three separate inspections that a machine's safety guard was broken. Mercer postponed the repair for six months to avoid stopping production. A worker's leg was caught in the press and had to be amputated below the knee. The worker spent six weeks in hospital and could not return to his previous job. Mercer had no earlier safety violations.",
+    "lenient": "Three years of probation and a fine of $50,000.",
+    "harsh": "Twelve years in prison and a permanent ban from managing a workplace."
+  },
+  {
+    "id": "negligent_injury_severe_2",
+    "offense": "negligent_injury",
+    "severity": "severe",
+    "variant": 2,
+    "text": "Ridley, a lifeguard at a public pool, left the chair for twenty minutes to talk with a friend at the snack counter. During this time a seven-year-old swimmer was found at the bottom of the deep end by another visitor. The child was resuscitated but had gone without oxygen for several minutes and now has permanent brain damage. The pool's records showed Ridley had finished the required safety training three weeks earlier.",
+    "lenient": "Two years of probation and loss of the lifeguard certificate.",
+    "harsh": "Ten years in prison and a permanent ban from work with the public."
+  },
+  {
+    "id": "negligent_injury_severe_3",
+    "offense": "negligent_injury",
+    "severity": "severe",
+    "variant": 3,
+    "text": "Lennox drove a freight truck for twenty hours straight to meet a delivery deadline, ignoring the legal limit on driving hours and falsifying the logbook. The truck drifted across the center line of a highway and collided with a car, killing both people inside. Investigators compared the vehicle's data with the logbook and found the entries had been invented. Lennox had earlier warnings for logbook violations.",
+    "lenient": "Four years in prison and a lifetime ban from driving trucks.",
+    "harsh": "Twenty years in prison with no early release."
+  },
+  {
+    "id": "deception_minor_0",
+    "offense": "deception",
+    "severity": "minor",
+    "variant": 0,
+    "text": "Jules arrived forty minutes late to a team meeting and told the group that a train had been cancelled. In fact Jules had overslept. A colleague who commuted on the same line mentioned that all trains had run on time, and the manager asked Jules about it later that day. Jules confirmed the real reason. This was the first time anyone at the company had raised a concern about Jules's punctuality.",
+    "lenient": "A brief conversation with a manager and a note on file.",
+    "harsh": "Dismissal and six months in jail."
+  },
+  {
+    "id": "deception_minor_1",
+    "offense": "deception",
+    "severity": "minor",
+    "variant": 1,
+    "text": "Teagan told the organisers of a neighborhood baking contest that a lemon cake was home-made, though it had been bought from a supermarket and moved to a plain tin. The cake won third place, and the prize was a $15 voucher. A judge recognised the product's distinctive glaze and asked Teagan about it. Teagan confirmed the cake was shop-bought, and the voucher was returned.",
+    "lenient": "Returning the voucher and a written apology.",
+    "harsh": "One year in jail and a public record of the deception."
+  },
+  {
+    "id": "deception_minor_2",
+    "offense": "deception",
+    "severity": "minor",
+    "variant": 2,
+    "text": "Bailey told a friend that a lawnmower would be returned by Saturday, although Bailey had already agreed to lend it on to a cousin for a month. The friend, who needed the mower for a family event, went to Bailey's house on Saturday and found it was not there. The friend borrowed one from a neighbor instead. Bailey had borrowed the mower twice before and returned it on time.",
+    "lenient": "A conversation and returning the mower within the week.",
+    "harsh": "Six months in jail and a criminal record."
+  },
+  {
+    "id": "deception_minor_3",
+    "offense": "deception",
+    "severity": "minor",
+    "variant": 3,
+    "text": "Spencer, a student, told a lecturer that an essay had been emailed on the deadline day and that the message must have been lost. Spencer had not yet started writing it. The lecturer asked for the sent-mail record, and Spencer admitted that no email had been sent. The essay was handed in three days later and counted as late, with a deduction of ten marks. Spencer had no earlier misconduct record.",
+    "lenient": "A grade deduction and a warning.",
+    "harsh": "Expulsion from the university and a record of misconduct."
+  },
+  {
+    "id": "deception_moderate_0",
+    "offense": "deception",
+    "severity": "moderate",
+    "variant": 0,
+    "text": "Whitney stated on a job application that a university degree in engineering had been completed, though Whitney had left the course after two years. The employer hired Whitney as a project coordinator on a salary of $62,000. A routine check by a new human-resources officer, fourteen months later, found no degree on record. Whitney's performance reviews in the job had been good, and Whitney admitted the false statement during the meeting.",
+    "lenient": "Dismissal and a requirement to repay one month of salary.",
+    "harsh": "Four years in prison and a criminal record."
+  },
+  {
+    "id": "deception_moderate_1",
+    "offense": "deception",
+    "severity": "moderate",
+    "variant": 1,
+    "text": "Hollis sold a house and did not mention that its basement had flooded three times in the previous five years. The buyers found out when water entered the basement in the first winter, causing $9,000 in damage. Neighbors confirmed the earlier floods, and Hollis's own repair invoices were located in the files of a plumbing firm. Hollis had made no earlier false statements to buyers.",
+    "lenient": "Paying the buyers' repair costs and a fine.",
+    "harsh": "Four years in prison and a civil judgment."
+  },
+  {
+    "id": "deception_moderate_2",
+    "offense": "deception",
+    "severity": "moderate",
+    "variant": 2,
+    "text": "Monroe, who had no electrical qualifications, introduced himself to homeowners as a licensed electrician and completed wiring jobs for eight households over a year, charging $1,200 on average. Several installations did not meet the safety code and had to be redone by a licensed firm. A regulator received a complaint from one homeowner and found that Monroe had never held a licence. No fire or injury had resulted.",
+    "lenient": "A fine and a ban from advertising electrical services.",
+    "harsh": "Five years in prison and a criminal record."
+  },
+  {
+    "id": "deception_moderate_3",
+    "offense": "deception",
+    "severity": "moderate",
+    "variant": 3,
+    "text": "Tatum, who sold used cars, turned back the odometer of a vehicle by 60,000 miles and told the buyer it had been owned by one careful driver. The buyer paid $11,000. A mechanic who serviced the car three months later saw that its wear did not match the reading and checked the service history, which showed the real mileage. Tatum had sold cars for twelve years and had one earlier complaint on file.",
+    "lenient": "Refunding the buyer and a fine.",
+    "harsh": "Five years in prison and a lifetime ban from trading in cars."
+  },
+  {
+    "id": "deception_severe_0",
+    "offense": "deception",
+    "severity": "severe",
+    "variant": 0,
+    "text": "Corbin practised as a doctor for a year at a private clinic, using a false medical diploma and a licence number belonging to another person. Corbin examined about 400 patients and prescribed medication to many of them. A pharmacist noticed unusual dosages and contacted the medical board, which found no record of Corbin. Several patients had to be re-examined by qualified doctors. No patient was found to have been permanently harmed.",
+    "lenient": "Three years in prison and a lifetime ban from healthcare.",
+    "harsh": "Fifteen years in prison with no early release."
+  },
+  {
+    "id": "deception_severe_1",
+    "offense": "deception",
+    "severity": "severe",
+    "variant": 1,
+    "text": "Everett, a structural engineer, signed an inspection report stating that a footbridge met safety standards, though tests carried out by Everett's own team had shown cracks in two supporting beams. The bridge stayed open for nine months. It collapsed under the weight of a crowd during a festival, and eleven people were taken to hospital, three with serious injuries. Everett's team's test results were found in a locked drawer.",
+    "lenient": "Five years in prison and a permanent loss of the engineering licence.",
+    "harsh": "Twenty years in prison with no early release."
+  },
+  {
+    "id": "deception_severe_2",
+    "offense": "deception",
+    "severity": "severe",
+    "variant": 2,
+    "text": "Granger testified under oath in a criminal trial that he had seen the defendant leave a shop with a weapon, though he had not been in the area. His account was the main evidence and the defendant was convicted and sentenced to eight years. Six years later, phone records showed that Granger had been in another city that day, and the conviction was overturned. Granger had been paid $5,000 by a third person to give the testimony.",
+    "lenient": "Four years in prison.",
+    "harsh": "Twenty years in prison with no early release."
+  },
+  {
+    "id": "deception_severe_3",
+    "offense": "deception",
+    "severity": "severe",
+    "variant": 3,
+    "text": "Haven, a food-safety manager at a processing plant, altered temperature records for three months to show that stored chicken had been kept at a safe temperature, when the cooling system had failed. Contaminated products were sold to stores in six states. Thirty-two people were treated for food poisoning, and four stayed in hospital for over a week. Health officials traced the batch numbers to the plant and found the original sensor data on a server.",
+    "lenient": "Five years in prison and a ban from the food industry.",
+    "harsh": "Twenty years in prison with no early release."
+  }
+]

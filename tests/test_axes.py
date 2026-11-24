@@ -54,6 +54,11 @@ def test_recovers_planted_axis():
     assert loo_r(X, y) > 0.8
 
 
+def test_alpha_grid_extends_below_1e3():
+    assert min(ax.ALPHAS) == 1e-6
+    assert list(ax.ALPHAS) == sorted(ax.ALPHAS)
+
+
 def test_random_ratings_unreliable():
     rng = np.random.default_rng(1)
     rs = [loo_r(rng.normal(size=(20, 64)), rng.uniform(-1, 1, 20)) for _ in range(5)]

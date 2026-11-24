@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import RidgeCV
 
-ALPHAS = [1e-3, 1e-2, 1e-1, 1.0, 10.0, 100.0]
+ALPHAS = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1.0, 10.0, 100.0]
 RELIABLE_R = 0.5
 MIN_FIT_EMOTIONS = 15
 RATING_COLS = {"V": "valence", "A": "arousal", "D": "dominance"}
